@@ -47,7 +47,9 @@ int main() {
         phi[imax][k] = phi[imax][k - 1] + dx;
     }
 
-    printf("\nTransmision de calor 2d\n");
+    printf("\n========================================\n");
+    printf("  Transmision de calor 2D - Secuencial\n");
+    printf("========================================\n");
     printf("\ndx = %12.4g, dy = %12.4g, dt = %12.4g, eps = %12.4g\n",
            dx, dy, dt, eps);
 
@@ -60,7 +62,7 @@ int main() {
         for (k = 1; k < kmax; k++) // paralizar este bucle
         {
 
-            for (i = 1; i < imax; i++) 
+            for (i = 1; i < imax; i++)
             {
                 dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i + (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
                 dphi = dphi * dt;
@@ -82,7 +84,8 @@ int main() {
     }
 
     t = clock();
-    printf("\n%d iteraciones\n", it);
-    printf("\nCPU tiempo = %#12.4g sec\n", t / 1000000.0);
+    printf("\n%d iteraciones completadas\n", it);
+    printf("\nTiempo de ejecucion = %12.6f sec\n", t / 1000000.0);
+    printf("========================================\n");
     return 0;
 }

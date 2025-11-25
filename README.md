@@ -130,36 +130,10 @@ Resolución de la ecuación de calor bidimensional usando el método de diferenc
 
 ## Compilación y Ejecución
 
-### Usando Makefile (recomendado)
+### Usando Makefile
 
 ```bash
-# Compilar todas las versiones
-make all
-
-# Compilar versiones individuales
-make secuencial
-make version1      # OpenMP
-make version2      # MPI
-
-# Ejecutar versiones
-make run-secuencial
-make run-v1        # OpenMP con 4 threads
-make run-v1-2      # OpenMP con 2 threads
-make run-v1-4      # OpenMP con 4 threads
-make run-v1-8      # OpenMP con 8 threads
-
-make run-v2        # MPI con 4 procesos
-make run-v2-2      # MPI con 2 procesos
-make run-v2-4      # MPI con 4 procesos
-make run-v2-8      # MPI con 8 procesos
-
-# Ejecutar benchmark completo
-make benchmark
-
-# Limpiar ejecutables
-make clean
-
-# Ver ayuda
+# Vease make help para mas informacion
 make help
 ```
 
