@@ -2,11 +2,11 @@
 
 Proyecto de paralelización de la ecuación de calor en 2D usando diferentes paradigmas de programación paralela.
 
-## 📋 Descripción del Problema
+## Descripción del Problema
 
 Resolución de la ecuación de calor bidimensional usando el método de diferencias finitas con esquema explícito de Euler. Se simula la transmisión de calor en una malla de 80x80 puntos con condiciones de frontera fijas.
 
-## 🚀 Versiones Implementadas
+## Versiones Implementadas
 
 ### Cuadro Comparativo de Versiones
 
@@ -34,7 +34,7 @@ Resolución de la ecuación de calor bidimensional usando el método de diferenc
 - Medición de tiempo base para calcular speedup
 
 #### **V1: OpenMP (Memoria Compartida)**
-**Características:**
+***Características:***
 - Paralelización del bucle externo `k` con `#pragma omp parallel for`
 - `reduction(max:dphimax)` para criterio de convergencia
 - Variables privadas: `i`, `dphi`
@@ -42,19 +42,19 @@ Resolución de la ecuación de calor bidimensional usando el método de diferenc
 - No requiere modificación de la estructura de datos
 - Sincronización automática en barreras
 
-**Ventajas:**
-- ✅ Fácil implementación (pocas líneas de código)
-- ✅ No requiere comunicación explícita
-- ✅ Balanceo automático de carga
-- ✅ Ideal para sistemas multi-core de un solo nodo
-- ✅ Buen speedup en arquitecturas modernas
+***Ventajas:***
+- Fácil implementación (pocas líneas de código)
+- No requiere comunicación explícita
+- Balanceo automático de carga
+- Ideal para sistemas multi-core de un solo nodo
+- Buen speedup en arquitecturas modernas
 
-**Limitaciones:**
-- ⚠️ Limitado a un solo nodo
-- ⚠️ Escalabilidad limitada por cores disponibles
+***Limitaciones:***
+- Limitado a un solo nodo
+- Escalabilidad limitada por cores disponibles
 
 #### **V2: MPI No-Bloqueante (Memoria Distribuida)**
-**Características:**
+***Características:***
 - Descomposición 1D del dominio (por filas)
 - Cada proceso calcula subdominio local
 - Intercambio de filas frontera (ghost rows) con vecinos
@@ -62,7 +62,7 @@ Resolución de la ecuación de calor bidimensional usando el método de diferenc
 - `MPI_Allreduce` para `dphimax` global
 - Solapamiento de comunicación y cómputo
 
-**Estrategia de Comunicación:**
+***Estrategia de Comunicación:***
 1. Iniciar envíos/recepciones no-bloqueantes (`MPI_Isend`/`MPI_Irecv`)
 2. Calcular puntos interiores mientras se comunican halos (solapamiento)
 3. Esperar que terminen comunicaciones (`MPI_Waitall`)
@@ -70,42 +70,42 @@ Resolución de la ecuación de calor bidimensional usando el método de diferenc
 5. Actualizar valores locales
 6. Reducción global de `dphimax` con `MPI_Allreduce`
 
-**Ventajas:**
-- ✅ Escalable a múltiples nodos
-- ✅ Mayor rendimiento por solapamiento
-- ✅ Distribución real de memoria
+***Ventajas:***
+- Escalable a múltiples nodos
+- Mayor rendimiento por solapamiento
+- Distribución real de memoria
 
-**Limitaciones:**
-- ⚠️ Mayor complejidad de código
-- ⚠️ Requiere manejo explícito de fronteras
-- ⚠️ Overhead de comunicación
+***Limitaciones:***
+- Mayor complejidad de código
+- Requiere manejo explícito de fronteras
+- Overhead de comunicación
 
 #### **V3: Híbrida MPI + OpenMP**
-**Características:**
+***Características:***
 - MPI para distribución entre procesos (nodos)
 - OpenMP para paralelizar dentro de cada proceso
 - Dos niveles de paralelismo
 - Reduce comunicaciones MPI vs V2 puro
 - Aprovecha arquitectura moderna (multi-nodo + multi-core)
 
-**Estrategia:**
+***Estrategia:***
 - Nivel externo (MPI): Descomposición de dominio
 - Nivel interno (OpenMP): Paralelización de bucles locales
 - Comunicación MPI solo entre procesos
 - Memoria compartida dentro de cada proceso
 
-**Ventajas:**
-- ✅ Máxima escalabilidad
-- ✅ Reduce comunicaciones vs MPI puro
-- ✅ Aprovecha todo el hardware disponible
-- ✅ Flexible en configuración procesos/threads
+***Ventajas:***
+- Máxima escalabilidad
+- Reduce comunicaciones vs MPI puro
+- Aprovecha todo el hardware disponible
+- Flexible en configuración procesos/threads
 
-**Limitaciones:**
-- ⚠️ Mayor complejidad
-- ⚠️ Requiere ajuste fino de parámetros
-- ⚠️ Debugging más difícil
+***Limitaciones:**
+- Mayor complejidad
+- Requiere ajuste fino de parámetros
+- Debugging más difícil
 
-## 📊 Aspectos Comunes a Todas las Versiones Paralelas
+## Aspectos Comunes a Todas las Versiones Paralelas
 
 ### **Regiones Paralelizadas:**
 
@@ -128,7 +128,7 @@ Resolución de la ecuación de calor bidimensional usando el método de diferenc
 ### **Variables Críticas:**
 - `dphimax`: Requiere reducción (max) para criterio de convergencia
 
-## 🛠️ Compilación y Ejecución
+## Compilación y Ejecución
 
 ### Usando Makefile (recomendado)
 
@@ -163,29 +163,7 @@ make clean
 make help
 ```
 
-### Compilación manual
-
-```bash
-# Secuencial
-g++ -O3 -Wall -o secuencial secuencial.cpp
-./secuencial
-
-# V1: OpenMP
-g++ -O3 -Wall -fopenmp -o version1 version1.cpp
-export OMP_NUM_THREADS=4
-./version1
-
-# V2: MPI
-mpic++ -O3 -Wall -o version2 version2.cpp
-mpirun -np 4 ./version2
-
-# V3: Híbrida (pendiente)
-mpic++ -O3 -Wall -fopenmp -o version3 version3.cpp
-export OMP_NUM_THREADS=2
-mpirun -np 4 ./version3
-```
-
-## 📈 Métricas de Evaluación
+## Métricas de Evaluación
 
 Para cada versión se debe medir:
 - **Tiempo de ejecución**
@@ -193,7 +171,7 @@ Para cada versión se debe medir:
 - **Eficiencia**: $E_p = \frac{S_p}{p} \times 100\%$
 - **Validación**: Comparación de resultados numéricos
 
-## 📚 Referencias
+## Referencias
 
 - Método de diferencias finitas para ecuaciones parabólicas
 - Descomposición de dominio para problemas 2D

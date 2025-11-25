@@ -1,0 +1,4 @@
+# Ignorar los binarios compilados
+out/secuencial
+out/version1
+out/version2
