@@ -1,7 +1,3 @@
-Aquí tienes el archivo Markdown listo para que lo copies y lo incluyas en tu proyecto o reporte. Explica detalladamente cómo funciona el código híbrido y cómo ejecutarlo.
-
------
-
 # Guía de Uso: Benchmark Híbrido (MPI vs OpenMP)
 
 Este documento describe el funcionamiento y uso del archivo `comparativa.cpp`. El objetivo de este programa es unificar dos paradigmas de programación paralela (Memoria Distribuida con **MPI** y Memoria Compartida con **OpenMP**) en un solo ejecutable para medir y comparar su rendimiento bajo las mismas condiciones.
