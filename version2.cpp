@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     double dx, dy, dx2, dy2, dx2i, dy2i, dt;
     int k, it;
 
-    // Parámetros físicos (igual que en versión secuencial)
+    // Parámetros físicos
     dx   = 1.0 / kmax;
     dy   = 1.0 / imax;
     dx2  = dx * dx;
