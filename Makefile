@@ -5,18 +5,19 @@
 CXX = g++
 MPICXX = mpic++
 
-# Flags de compilación
-CXXFLAGS = -O3 -Wall
+# Flags de compilación (sin optimización para pruebas de Khipu)
+CXXFLAGS = -Wall
 OMPFLAGS = -fopenmp
 MPIFLAGS = 
 
 # Ejecutables
-TARGETS = secuencial version1 version2
+TARGETS = secuencial version1 version2 version3
 
 # Archivos fuente
 SECUENCIAL_SRC = secuencial.cpp
 VERSION1_SRC = version1.cpp
 VERSION2_SRC = version2.cpp
+VERSION3_SRC = version3.cpp
 
 # Colores para output
 VERDE = \033[0;32m
@@ -30,6 +31,7 @@ all: $(TARGETS)
 	@echo "  - secuencial    (versión secuencial)"
 	@echo "  - version1      (OpenMP)"
 	@echo "  - version2      (MPI no-bloqueante)"
+	@echo "  - version3      (Benchmark completo: Seq + MPI + OMP)"
 
 # Compilar versión secuencial
 secuencial: $(SECUENCIAL_SRC)
@@ -48,6 +50,12 @@ version2: $(VERSION2_SRC)
 	@echo "$(AZUL)Compilando versión 2 (MPI)...$(RESET)"
 	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o $@ $<
 	@echo "$(VERDE)✓ version2 compilado$(RESET)"
+
+# Compilar versión 3 (Benchmark completo: Seq + MPI + OpenMP)
+version3: $(VERSION3_SRC)
+	@echo "$(AZUL)Compilando versión 3 (Benchmark completo)...$(RESET)"
+	$(MPICXX) $(CXXFLAGS) $(OMPFLAGS) $(MPIFLAGS) -o $@ $<
+	@echo "$(VERDE)✓ version3 compilado$(RESET)"
 
 # Ejecutar versión secuencial
 run-secuencial: secuencial
@@ -96,6 +104,44 @@ run-v2-8: version2
 	@echo "$(AZUL)Ejecutando versión 2 con 8 procesos...$(RESET)"
 	@mpirun -np 8 ./version2
 
+# Ejecutar versión 3 (Benchmark completo) con diferentes configuraciones
+run-v3-1: version3
+	@echo "$(AZUL)Ejecutando benchmark con 1 proceso MPI...$(RESET)"
+	@mpirun -np 1 ./version3
+
+run-v3-2: version3
+	@echo "$(AZUL)Ejecutando benchmark con 2 procesos MPI...$(RESET)"
+	@mpirun -np 2 ./version3
+
+run-v3-4: version3
+	@echo "$(AZUL)Ejecutando benchmark con 4 procesos MPI...$(RESET)"
+	@mpirun -np 4 ./version3
+
+run-v3-8: version3
+	@echo "$(AZUL)Ejecutando benchmark con 8 procesos MPI...$(RESET)"
+	@mpirun -np 8 ./version3
+
+# Benchmark completo - generar CSV con múltiples configuraciones
+benchmark-csv: version3
+	@echo "$(VERDE)========================================$(RESET)"
+	@echo "$(VERDE)  GENERANDO DATOS PARA GRÁFICAS$(RESET)"
+	@echo "$(VERDE)========================================$(RESET)"
+	@rm -f resultados_benchmark.csv
+	@echo ""
+	@echo "$(AZUL)Ejecutando con 1 proceso...$(RESET)"
+	@mpirun -np 1 ./version3
+	@echo ""
+	@echo "$(AZUL)Ejecutando con 2 procesos...$(RESET)"
+	@mpirun -np 2 ./version3
+	@echo ""
+	@echo "$(AZUL)Ejecutando con 4 procesos...$(RESET)"
+	@mpirun -np 4 ./version3
+	@echo ""
+	@echo "$(AZUL)Ejecutando con 8 procesos...$(RESET)"
+	@mpirun -np 8 ./version3
+	@echo ""
+	@echo "$(VERDE)✓ CSV generado: resultados_benchmark.csv$(RESET)"
+
 # Benchmark - comparar todas las versiones
 benchmark: secuencial version1 version2
 	@echo "$(VERDE)========================================$(RESET)"
@@ -131,7 +177,7 @@ benchmark: secuencial version1 version2
 # Limpiar ejecutables
 clean:
 	@echo "$(AZUL)Limpiando archivos compilados...$(RESET)"
-	rm -f $(TARGETS)
+	rm -f $(TARGETS) resultados_benchmark.csv
 	@echo "$(VERDE)✓ Limpieza completada$(RESET)"
 
 # Limpiar y recompilar
@@ -149,6 +195,7 @@ help:
 	@echo "  make secuencial       - Compilar solo versión secuencial"
 	@echo "  make version1         - Compilar solo versión OpenMP"
 	@echo "  make version2         - Compilar solo versión MPI"
+	@echo "  make version3         - Compilar solo benchmark completo"
 	@echo ""
 	@echo "$(AZUL)Ejecución:$(RESET)"
 	@echo "  make run-secuencial   - Ejecutar versión secuencial"
@@ -162,12 +209,17 @@ help:
 	@echo "  make run-v2-2         - Ejecutar MPI con 2 procesos"
 	@echo "  make run-v2-4         - Ejecutar MPI con 4 procesos"
 	@echo "  make run-v2-8         - Ejecutar MPI con 8 procesos"
+	@echo "  make run-v3-1         - Ejecutar benchmark con 1 proceso"
+	@echo "  make run-v3-2         - Ejecutar benchmark con 2 procesos"
+	@echo "  make run-v3-4         - Ejecutar benchmark con 4 procesos"
+	@echo "  make run-v3-8         - Ejecutar benchmark con 8 procesos"
 	@echo ""
 	@echo "$(AZUL)Utilidades:$(RESET)"
 	@echo "  make benchmark        - Ejecutar todas las versiones y comparar"
+	@echo "  make benchmark-csv    - Generar CSV con datos 1,2,4,8 procesos"
 	@echo "  make clean            - Eliminar ejecutables"
 	@echo "  make rebuild          - Limpiar y recompilar"
 	@echo "  make help             - Mostrar esta ayuda"
 	@echo ""
 
-.PHONY: all clean rebuild run-secuencial run-v1 run-v1-1 run-v1-2 run-v1-4 run-v1-8 run-v2 run-v2-1 run-v2-2 run-v2-4 run-v2-8 benchmark help
+.PHONY: all clean rebuild run-secuencial run-v1 run-v1-1 run-v1-2 run-v1-4 run-v1-8 run-v2 run-v2-1 run-v2-2 run-v2-4 run-v2-8 run-v3-1 run-v3-2 run-v3-4 run-v3-8 benchmark benchmark-csv help
