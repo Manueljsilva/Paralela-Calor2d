@@ -25,16 +25,17 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
 
 ### 2. **V1: OpenMP** (`version1.cpp`)
 - **Paradigma:** Memoria compartida (multi-threading)
-- **Paralelización:** Bucle espacial externo (k-loop)
+- **Paralelización:** Ambos bucles espaciales con `collapse(2)` (similar a descomposición 2D)
 - **Directivas clave:**
   ```cpp
-  #pragma omp parallel for private(i, dphi) reduction(max:dphimax) schedule(static)
+  #pragma omp parallel for collapse(2) private(dphi) reduction(max:dphimax) schedule(static)
   ```
 - **Ventajas:**
-  - ✅ Fácil implementación
-  - ✅ Sin comunicación explícita
-  - ✅ Buen rendimiento en sistemas multi-core
-- **Escalabilidad:** Limitada a un nodo
+  -  Paralelización 2D: divide dominio en grid 2D de iteraciones (79×79 = 6,241 iteraciones)
+  -  Mejor balanceo de carga con muchos threads
+  -  Comparación justa con descomposición 2D de MPI
+  -  Sin comunicación explícita
+  -  Buen rendimiento en sistemas multi-core
 
 ### 3. **V2: MPI No-Bloqueante** (`version2.cpp`)
 - **Paradigma:** Memoria distribuida (multi-proceso)
@@ -48,8 +49,8 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
   3. `MPI_Waitall` (esperar comunicaciones)
   4. Computar puntos frontera
 - **Ventajas:**
-  - ✅ Escalable a múltiples nodos
-  - ✅ Solapamiento comunicación/cómputo
+  -  Escalable a múltiples nodos
+  -  Solapamiento comunicación/cómputo
 - **Overhead:** Comunicación aumenta con más procesos (~8-15% en grids pequeños)
 
 ### 4. **V3: Benchmark Completo** (`version3.cpp`)
@@ -127,8 +128,6 @@ mpic++ -Wall -fopenmp -o version3 version3.cpp
 mpirun -np 4 ./version3
 ```
 
-**Nota:** Sin `-O3` para pruebas locales. En Khipu (producción) agregar `-O3` para optimización.
-
 ## Análisis de Resultados
 
 ### **Generar Gráficas**
@@ -141,19 +140,6 @@ make benchmark-csv
 python3 graficar.py
 ```
 
-Esto genera `graficas_rendimiento.png` con:
-- **Speedup vs Procesos** (MPI y OpenMP vs Ideal)
-- **Eficiencia vs Procesos** 
-- **GFlops vs Procesos**
-- **Overhead de Comunicación MPI**
-
-### **Resultados Típicos (Grid 80×80, sin -O3)**
-
-| Procesos | Speedup MPI | Eficiencia MPI | GFlops MPI | Comunicación % |
-|----------|-------------|----------------|------------|----------------|
-| 1        | 0.81x       | 81.2%          | 1.83       | 0.17%          |
-| 2        | 1.51x       | 75.7%          | 3.00       | 8.56%          |
-| 4        | 2.80x       | 70.0%          | 4.93       | 15.40%         |
 
 **Observaciones:**
 -  MPI escala mejor que OpenMP en este problema
@@ -211,12 +197,6 @@ Iteraciones: 14320 (para grid 80×80)
 
 Verificar que `dphimax < eps` al final de la ejecución.
 
-##  Referencias y Documentación
-
-- **OpenMP:** [openmp.org](https://www.openmp.org/)
-- **MPI:** [mpi-forum.org](https://www.mpi-forum.org/)
-- **Diferencias Finitas:** Método explícito de Euler para EDPs parabólicas
-- **Descomposición de Dominio:** Estrategia 1D por filas (row-major en C++)
 
 ##  Notas de Diseño
 

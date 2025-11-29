@@ -66,6 +66,15 @@ int main(int argc, char** argv) {
     }
 
     // ============================================
+    // CREACIÓN DE TIPOS DERIVADOS MPI
+    // ============================================
+    // Tipo derivado para una fila completa (kmax+1 elementos double)
+    // Esto permite comunicar filas completas de manera más eficiente
+    MPI_Datatype MPI_ROW_TYPE;
+    MPI_Type_contiguous(kmax + 1, MPI_DOUBLE, &MPI_ROW_TYPE);
+    MPI_Type_commit(&MPI_ROW_TYPE);
+
+    // ============================================
     // INICIALIZACIÓN DE CONDICIONES DE FRONTERA
     // Igual que el código secuencial, pero distribuido
     // ============================================
@@ -115,6 +124,7 @@ int main(int argc, char** argv) {
         printf("\n========================================\n");
         printf("  Transmision de calor 2D - Version 2\n");
         printf("  Paralelizacion: MPI No-Bloqueante, 1D por filas\n");
+        printf("  Tipos derivados MPI: MPI_ROW_TYPE\n");
         printf("========================================\n");
         printf("\ndx = %12.4g, dy = %12.4g, dt = %12.4g, eps = %12.4g\n",
                dx, dy, dt, eps);
@@ -149,26 +159,27 @@ int main(int argc, char** argv) {
         int req_count = 0;
 
         // Enviar primera fila interior (i_local = 1) al vecino superior
+        // Usando tipo derivado MPI_ROW_TYPE en lugar de MPI_DOUBLE
         if (rank > 0 && filas_locales > 0) {
-            MPI_Isend(phi_local[1], kmax + 1, MPI_DOUBLE,
+            MPI_Isend(phi_local[1], 1, MPI_ROW_TYPE,
                       rank - 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
         }
 
         // Enviar última fila interior (i_local = filas_locales) al vecino inferior
         if (rank < size - 1 && filas_locales > 0) {
-            MPI_Isend(phi_local[filas_locales], kmax + 1, MPI_DOUBLE,
+            MPI_Isend(phi_local[filas_locales], 1, MPI_ROW_TYPE,
                       rank + 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
         }
 
         // Recibir halo superior desde vecino superior
         if (rank > 0 && filas_locales > 0) {
-            MPI_Irecv(phi_local[0], kmax + 1, MPI_DOUBLE,
+            MPI_Irecv(phi_local[0], 1, MPI_ROW_TYPE,
                       rank - 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
         }
 
         // Recibir halo inferior desde vecino inferior
         if (rank < size - 1 && filas_locales > 0) {
-            MPI_Irecv(phi_local[filas_locales + 1], kmax + 1, MPI_DOUBLE,
+            MPI_Irecv(phi_local[filas_locales + 1], 1, MPI_ROW_TYPE,
                       rank + 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
         }
 
@@ -272,6 +283,9 @@ int main(int argc, char** argv) {
     }
     delete[] phi_local;
     delete[] phin_local;
+
+    // Liberar tipo derivado MPI
+    MPI_Type_free(&MPI_ROW_TYPE);
 
     MPI_Finalize();
     return 0;

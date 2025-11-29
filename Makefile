@@ -11,12 +11,13 @@ OMPFLAGS = -fopenmp
 MPIFLAGS = 
 
 # Ejecutables
-TARGETS = secuencial version1 version2 version3
+TARGETS = secuencial version1 version2 version2_2d version3
 
 # Archivos fuente
 SECUENCIAL_SRC = secuencial.cpp
 VERSION1_SRC = version1.cpp
 VERSION2_SRC = version2.cpp
+VERSION2_2D_SRC = version2_2d.cpp
 VERSION3_SRC = version3.cpp
 
 # Colores para output
@@ -30,7 +31,8 @@ all: $(TARGETS)
 	@echo "$(AZUL)Ejecutables disponibles:$(RESET)"
 	@echo "  - secuencial    (versión secuencial)"
 	@echo "  - version1      (OpenMP)"
-	@echo "  - version2      (MPI no-bloqueante)"
+	@echo "  - version2      (MPI 1D por filas - pruebas locales)"
+	@echo "  - version2_2d   (MPI 2D por bloques - Khipu)"
 	@echo "  - version3      (Benchmark completo: Seq + MPI + OMP)"
 
 # Compilar versión secuencial
@@ -45,11 +47,17 @@ version1: $(VERSION1_SRC)
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
 	@echo "$(VERDE)✓ version1 compilado$(RESET)"
 
-# Compilar versión 2 (MPI)
+# Compilar versión 2 (MPI 1D)
 version2: $(VERSION2_SRC)
-	@echo "$(AZUL)Compilando versión 2 (MPI)...$(RESET)"
+	@echo "$(AZUL)Compilando versión 2 (MPI 1D por filas)...$(RESET)"
 	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o $@ $<
 	@echo "$(VERDE)✓ version2 compilado$(RESET)"
+
+# Compilar versión 2D (MPI 2D por bloques - para Khipu)
+version2_2d: $(VERSION2_2D_SRC)
+	@echo "$(AZUL)Compilando versión 2D (MPI 2D por bloques)...$(RESET)"
+	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o $@ $<
+	@echo "$(VERDE)✓ version2_2d compilado$(RESET)"
 
 # Compilar versión 3 (Benchmark completo: Seq + MPI + OpenMP)
 version3: $(VERSION3_SRC)
@@ -103,6 +111,23 @@ run-v2-4: version2
 run-v2-8: version2
 	@echo "$(AZUL)Ejecutando versión 2 con 8 procesos...$(RESET)"
 	@mpirun -np 8 ./version2
+
+# Ejecutar versión 2D con diferentes números de procesos (para Khipu)
+run-v2d-4: version2_2d
+	@echo "$(AZUL)Ejecutando versión 2D con 4 procesos...$(RESET)"
+	@mpirun -np 4 ./version2_2d
+
+run-v2d-8: version2_2d
+	@echo "$(AZUL)Ejecutando versión 2D con 8 procesos...$(RESET)"
+	@mpirun -np 8 ./version2_2d
+
+run-v2d-16: version2_2d
+	@echo "$(AZUL)Ejecutando versión 2D con 16 procesos...$(RESET)"
+	@mpirun -np 16 ./version2_2d
+
+run-v2d-32: version2_2d
+	@echo "$(AZUL)Ejecutando versión 2D con 32 procesos...$(RESET)"
+	@mpirun -np 32 ./version2_2d
 
 # Ejecutar versión 3 (Benchmark completo) con diferentes configuraciones
 run-v3-1: version3
@@ -179,6 +204,10 @@ clean:
 	@echo "$(AZUL)Limpiando archivos compilados...$(RESET)"
 	rm -f $(TARGETS) resultados_benchmark.csv
 	@echo "$(VERDE)✓ Limpieza completada$(RESET)"
+
+# Compilar todas las versiones incluyendo 2D
+all-with-2d: secuencial version1 version2 version2_2d version3
+	@echo "$(VERDE)✓ Compilación completa (incluyendo versión 2D)$(RESET)"
 
 # Limpiar y recompilar
 rebuild: clean all
