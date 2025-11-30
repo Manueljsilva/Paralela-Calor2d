@@ -1,0 +1,2 @@
+-Wall -fopenmp
+-std=c++20

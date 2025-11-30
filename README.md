@@ -2,7 +2,7 @@
 
 Proyecto de paralelización de la ecuación de calor en 2D usando diferentes paradigmas de programación paralela (OpenMP y MPI).
 
-## 📋 Descripción del Problema
+## Descripción del Problema
 
 Resolución de la ecuación de calor bidimensional usando el método de diferencias finitas con esquema explícito de Euler. Se simula la transmisión de calor en una malla de 80×80 puntos con condiciones de frontera fijas.
 
@@ -16,7 +16,7 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
 - **Criterio de convergencia:** $\epsilon = 10^{-8}$
 - **Esquema:** Euler explícito (diferencias finitas)
 
-## 🚀 Versiones Implementadas
+## Versiones Implementadas
 
 ### 1. **Secuencial** (`secuencial.cpp`)
 - Código base sin paralelización
@@ -40,7 +40,7 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
 ### 3. **V2: MPI No-Bloqueante** (`version2.cpp`)
 - **Paradigma:** Memoria distribuida (multi-proceso)
 - **Descomposición:** Dominio 1D por filas
-- **Comunicación:** 
+- **Comunicación:**
   - `MPI_Isend` / `MPI_Irecv` para intercambio de halos (ghost rows)
   - `MPI_Allreduce` para convergencia global
 - **Estrategia de solapamiento:**
@@ -64,7 +64,7 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
 - **Salida:** CSV para análisis (`resultados_benchmark.csv`)
 - **Gráficas:** Script Python incluido (`graficar.py`)
 
-## 🛠️ Compilación y Ejecución
+## Compilación y Ejecución
 
 ### **Opción 1: Usando Makefile (Recomendado)**
 
@@ -163,7 +163,7 @@ Para ejecutar en el cluster Khipu de la universidad:
 
 # Compilar con optimización
 module load gcc/11.2.0 openmpi/4.1.1
-mpic++ -O3 -Wall -fopenmp -o version3 version3.cpp
+mpic++ -Wall -fopenmp -o version3 version3.cpp
 
 # Ejecutar benchmark con 32 procesos (4 nodos × 8 procesos)
 mpirun -np 32 ./version3
@@ -188,7 +188,7 @@ Recomendaciones:
 - **320×320:** Khipu con 16-32 procesos
 - **640×640:** Khipu con 64-128 procesos
 
-## 🔬 Validación de Resultados
+## Validación de Resultados
 
 Todos los códigos deben converger al mismo número de iteraciones:
 ```
@@ -207,9 +207,9 @@ Verificar que `dphimax < eps` al final de la ejecución.
 
 ##  Autor
 
-- Manuel Jesus Silva Anampa 
+- Manuel Jesus Silva Anampa
+- Alejandro Joel Ore Garcia
 - ...
-- ...   
 
 ##  Licencia
 

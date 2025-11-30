@@ -54,7 +54,7 @@ long long calcular_flops(int filas, int columnas, int iteraciones) {
     // dphi total: 1 suma + 1 multiplicación (dt) = 2 ops
     // Actualización: 1 suma = 1 op
     // Total: 19 FLOPs por punto por iteración
-    
+
     long long puntos_internos = (long long)(filas - 1) * (columnas - 1);
     return puntos_internos * iteraciones * 19LL;
 }
@@ -103,22 +103,22 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         }
         phi_local[i][kmax] = 1.0;
     }
-    
+
     if (rank == 0) phi_local[0][0] = 0.0;
     if (rank == size - 1) phi_local[filas_locales + 1][0] = 0.0;
 
     if (rank == 0) {
-        for (k = 1; k < kmax; k++) 
+        for (k = 1; k < kmax; k++)
             phi_local[0][k] = phi_local[0][k - 1] + dx;
     }
     if (rank == size - 1) {
-        for (k = 1; k < kmax; k++) 
+        for (k = 1; k < kmax; k++)
             phi_local[filas_locales + 1][k] = phi_local[filas_locales + 1][k - 1] + dx;
     }
 
     // Sincronizar antes de medir
     MPI_Barrier(MPI_COMM_WORLD);
-    
+
     // Variables de medición
     double t_inicio = MPI_Wtime();
     double t_comunicacion_total = 0.0;
@@ -139,24 +139,24 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         // COMUNICACIÓN: Isend/Irecv
         // ==========================================
         t_aux = MPI_Wtime();
-        
+
         if (rank > 0 && filas_locales > 0) {
-            MPI_Isend(phi_local[1], kmax + 1, MPI_DOUBLE, 
+            MPI_Isend(phi_local[1], kmax + 1, MPI_DOUBLE,
                      rank - 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
         }
         if (rank < size - 1 && filas_locales > 0) {
-            MPI_Isend(phi_local[filas_locales], kmax + 1, MPI_DOUBLE, 
+            MPI_Isend(phi_local[filas_locales], kmax + 1, MPI_DOUBLE,
                      rank + 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
         }
         if (rank > 0 && filas_locales > 0) {
-            MPI_Irecv(phi_local[0], kmax + 1, MPI_DOUBLE, 
+            MPI_Irecv(phi_local[0], kmax + 1, MPI_DOUBLE,
                      rank - 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
         }
         if (rank < size - 1 && filas_locales > 0) {
-            MPI_Irecv(phi_local[filas_locales + 1], kmax + 1, MPI_DOUBLE, 
+            MPI_Irecv(phi_local[filas_locales + 1], kmax + 1, MPI_DOUBLE,
                      rank + 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
         }
-        
+
         t_isend_irecv += (MPI_Wtime() - t_aux);
 
         // ==========================================
@@ -168,9 +168,9 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         if (i_fin >= i_inicio) {
             for (k = 1; k < kmax; k++) {
                 for (int i_local = i_inicio; i_local <= i_fin; i_local++) {
-                    double dphi = (phi_local[i_local + 1][k] + phi_local[i_local - 1][k] 
+                    double dphi = (phi_local[i_local + 1][k] + phi_local[i_local - 1][k]
                                   - 2.0 * phi_local[i_local][k]) * dy2i +
-                                  (phi_local[i_local][k + 1] + phi_local[i_local][k - 1] 
+                                  (phi_local[i_local][k + 1] + phi_local[i_local][k - 1]
                                   - 2.0 * phi_local[i_local][k]) * dx2i;
                     dphi *= dt;
                     dphimax_local = max(dphimax_local, std::fabs(dphi));
@@ -194,9 +194,9 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         if (filas_locales >= 1) {
             int i_local = 1;
             for (k = 1; k < kmax; k++) {
-                double dphi = (phi_local[i_local + 1][k] + phi_local[i_local - 1][k] 
+                double dphi = (phi_local[i_local + 1][k] + phi_local[i_local - 1][k]
                               - 2.0 * phi_local[i_local][k]) * dy2i +
-                              (phi_local[i_local][k + 1] + phi_local[i_local][k - 1] 
+                              (phi_local[i_local][k + 1] + phi_local[i_local][k - 1]
                               - 2.0 * phi_local[i_local][k]) * dx2i;
                 dphi *= dt;
                 dphimax_local = max(dphimax_local, std::fabs(dphi));
@@ -207,9 +207,9 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         if (filas_locales >= 2) {
             int i_local = filas_locales;
             for (k = 1; k < kmax; k++) {
-                double dphi = (phi_local[i_local + 1][k] + phi_local[i_local - 1][k] 
+                double dphi = (phi_local[i_local + 1][k] + phi_local[i_local - 1][k]
                               - 2.0 * phi_local[i_local][k]) * dy2i +
-                              (phi_local[i_local][k + 1] + phi_local[i_local][k - 1] 
+                              (phi_local[i_local][k + 1] + phi_local[i_local][k - 1]
                               - 2.0 * phi_local[i_local][k]) * dx2i;
                 dphi *= dt;
                 dphimax_local = max(dphimax_local, std::fabs(dphi));
@@ -228,7 +228,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         // COMUNICACIÓN: Allreduce
         // ==========================================
         t_aux = MPI_Wtime();
-        MPI_Allreduce(&dphimax_local, &dphimax_global, 
+        MPI_Allreduce(&dphimax_local, &dphimax_global,
                       1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         t_allreduce += (MPI_Wtime() - t_aux);
 
@@ -247,13 +247,13 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
 
     // Calcular métricas
     t_comunicacion_total = t_isend_irecv + t_waitall + t_allreduce;
-    
+
     MetricasMPI metricas;
     metricas.tiempo_total = t_final - t_inicio;
     metricas.tiempo_comunicacion = t_comunicacion_total;
     metricas.tiempo_computo = metricas.tiempo_total - t_comunicacion_total;
     metricas.iteraciones = it;
-    
+
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
     metricas.porcentaje_comunicacion = (t_comunicacion_total / metricas.tiempo_total) * 100.0;
@@ -275,18 +275,18 @@ MetricasSecuencial ejecutar_secuencial() {
     dx2i = 1.0 / dx2;
     dy2i = 1.0 / dy2;
     dt = min(dx2, dy2) / 4.0;
-    
+
     // Inicialización
-    for (k = 0; k < kmax; k++) 
-        for (i = 1; i < imax; i++) 
+    for (k = 0; k < kmax; k++)
+        for (i = 1; i < imax; i++)
             phi[i][k] = 0.0;
-    
-    for (i = 0; i <= imax; i++) 
+
+    for (i = 0; i <= imax; i++)
         phi[i][kmax] = 1.0;
-    
-    phi[0][0] = 0.0; 
+
+    phi[0][0] = 0.0;
     phi[imax][0] = 0.0;
-    
+
     for (k = 1; k < kmax; k++) {
         phi[0][k] = phi[0][k - 1] + dx;
         phi[imax][k] = phi[imax][k - 1] + dx;
@@ -297,10 +297,10 @@ MetricasSecuencial ejecutar_secuencial() {
     // Bucle temporal sin paralelización
     for (it = 1; it <= itmax; it++) {
         dphimax = 0.;
-        
+
         for (k = 1; k < kmax; k++) {
             for (i = 1; i < imax; i++) {
-                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i + 
+                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i +
                        (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
                 dphi = dphi * dt;
                 dphimax = max(dphimax, dphi);
@@ -313,7 +313,7 @@ MetricasSecuencial ejecutar_secuencial() {
                 phi[i][k] = phin[i][k];
             }
         }
-        
+
         if (dphimax < eps) break;
     }
 
@@ -322,7 +322,7 @@ MetricasSecuencial ejecutar_secuencial() {
     MetricasSecuencial metricas;
     metricas.tiempo_total = t_fin - t_inicio;
     metricas.iteraciones = it;
-    
+
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
 
@@ -342,18 +342,18 @@ MetricasOMP ejecutar_omp() {
     dx2i = 1.0 / dx2;
     dy2i = 1.0 / dy2;
     dt = min(dx2, dy2) / 4.0;
-    
+
     // Inicialización
-    for (k = 0; k < kmax; k++) 
-        for (i = 1; i < imax; i++) 
+    for (k = 0; k < kmax; k++)
+        for (i = 1; i < imax; i++)
             phi[i][k] = 0.0;
-    
-    for (i = 0; i <= imax; i++) 
+
+    for (i = 0; i <= imax; i++)
         phi[i][kmax] = 1.0;
-    
-    phi[0][0] = 0.0; 
+
+    phi[0][0] = 0.0;
     phi[imax][0] = 0.0;
-    
+
     for (k = 1; k < kmax; k++) {
         phi[0][k] = phi[0][k - 1] + dx;
         phi[imax][k] = phi[imax][k - 1] + dx;
@@ -363,11 +363,11 @@ MetricasOMP ejecutar_omp() {
 
     for (it = 1; it <= itmax; it++) {
         dphimax = 0.;
-        
+
         #pragma omp parallel for private(i, dphi) reduction(max:dphimax) schedule(static)
         for (k = 1; k < kmax; k++) {
             for (i = 1; i < imax; i++) {
-                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i + 
+                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i +
                        (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
                 dphi = dphi * dt;
                 dphimax = max(dphimax, dphi);
@@ -381,7 +381,7 @@ MetricasOMP ejecutar_omp() {
                 phi[i][k] = phin[i][k];
             }
         }
-        
+
         if (dphimax < eps) break;
     }
 
@@ -390,7 +390,7 @@ MetricasOMP ejecutar_omp() {
     MetricasOMP metricas;
     metricas.tiempo_total = t_fin - t_inicio;
     metricas.iteraciones = it;
-    
+
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
 
@@ -398,13 +398,13 @@ MetricasOMP ejecutar_omp() {
 }
 
 // FUNCIÓN: Exportar CSV para análisis
-void exportar_csv(int num_procesos, int num_threads, 
+void exportar_csv(int num_procesos, int num_threads,
                   const MetricasSecuencial& seq,
                   const MetricasMPI& mpi, const MetricasOMP& omp,
                   double speedup_mpi, double eficiencia_mpi,
                   double speedup_omp, double eficiencia_omp) {
-    std::ofstream archivo("resultados_benchmark.csv", std::ios::app);
-    
+    std::ofstream archivo("plots/resultados_benchmark.csv", std::ios::app);
+
     // Si el archivo está vacío, escribir encabezado
     archivo.seekp(0, std::ios::end);
     if (archivo.tellp() == 0) {
@@ -412,7 +412,7 @@ void exportar_csv(int num_procesos, int num_threads,
                 << "Speedup_MPI,Eficiencia_MPI,Speedup_OMP,Eficiencia_OMP,"
                 << "GFlops_Seq,GFlops_MPI,GFlops_OMP,Comunicacion_%,Iteraciones\n";
     }
-    
+
     archivo << std::fixed << std::setprecision(6);
     archivo << num_procesos << ","
             << num_threads << ","
@@ -428,7 +428,7 @@ void exportar_csv(int num_procesos, int num_threads,
             << omp.gflops << ","
             << mpi.porcentaje_comunicacion << ","
             << mpi.iteraciones << "\n";
-    
+
     archivo.close();
 }
 
@@ -449,11 +449,11 @@ int main(int argc, char** argv) {
 
     // FASE 0: EJECUTAR SECUENCIAL (Baseline)
     MetricasSecuencial metricas_seq;
-    
+
     if (rank == 0) {
         printf("[SEQ] Ejecutando versión secuencial (baseline)...\n");
         metricas_seq = ejecutar_secuencial();
-        printf("      Tiempo: %.6f s | Iteraciones: %d\n\n", 
+        printf("      Tiempo: %.6f s | Iteraciones: %d\n\n",
                metricas_seq.tiempo_total, metricas_seq.iteraciones);
     }
 
@@ -470,18 +470,18 @@ int main(int argc, char** argv) {
 
     // Recolectar tiempos máximos de todos los procesos
     MetricasMPI metricas_mpi;
-    MPI_Reduce(&metricas_mpi_local.tiempo_total, &metricas_mpi.tiempo_total, 
+    MPI_Reduce(&metricas_mpi_local.tiempo_total, &metricas_mpi.tiempo_total,
                1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&metricas_mpi_local.tiempo_comunicacion, &metricas_mpi.tiempo_comunicacion, 
+    MPI_Reduce(&metricas_mpi_local.tiempo_comunicacion, &metricas_mpi.tiempo_comunicacion,
                1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&metricas_mpi_local.tiempo_computo, &metricas_mpi.tiempo_computo, 
+    MPI_Reduce(&metricas_mpi_local.tiempo_computo, &metricas_mpi.tiempo_computo,
                1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    
+
     if (rank == 0) {
         metricas_mpi.iteraciones = metricas_mpi_local.iteraciones;
         long long flops = calcular_flops(imax, kmax, metricas_mpi.iteraciones);
         metricas_mpi.gflops = (double)flops / (metricas_mpi.tiempo_total * 1e9);
-        metricas_mpi.porcentaje_comunicacion = 
+        metricas_mpi.porcentaje_comunicacion =
             (metricas_mpi.tiempo_comunicacion / metricas_mpi.tiempo_total) * 100.0;
     }
 
@@ -492,12 +492,12 @@ int main(int argc, char** argv) {
     // ==========================================
     MetricasOMP metricas_omp;
     int num_threads = 0;
-    
+
     if (rank == 0) {
         num_threads = omp_get_max_threads();
         printf("[OMP] Ejecutando con %d threads...\n", num_threads);
         metricas_omp = ejecutar_omp();
-        printf("      Tiempo: %.6f s | Iteraciones: %d\n\n", 
+        printf("      Tiempo: %.6f s | Iteraciones: %d\n\n",
                metricas_omp.tiempo_total, metricas_omp.iteraciones);
     }
 
@@ -506,38 +506,38 @@ int main(int argc, char** argv) {
         printf("========================================\n");
         printf("  RESULTADOS DETALLADOS\n");
         printf("========================================\n\n");
-        
+
         // --- SECUENCIAL ---
         printf("0. SECUENCIAL (Baseline):\n");
         printf("   Tiempo Total        : %12.6f s\n", metricas_seq.tiempo_total);
         printf("   Iteraciones         : %12d\n", metricas_seq.iteraciones);
         printf("   Rendimiento         : %12.6f GFlops\n\n", metricas_seq.gflops);
-        
+
         // --- MPI ---
         printf("1. MPI (%d Procesos):\n", size);
         printf("   Tiempo Total        : %12.6f s\n", metricas_mpi.tiempo_total);
-        printf("   Tiempo Cómputo      : %12.6f s (%5.2f%%)\n", 
+        printf("   Tiempo Cómputo      : %12.6f s (%5.2f%%)\n",
                metricas_mpi.tiempo_computo,
                (metricas_mpi.tiempo_computo / metricas_mpi.tiempo_total) * 100.0);
-        printf("   Tiempo Comunicación : %12.6f s (%5.2f%%)\n", 
+        printf("   Tiempo Comunicación : %12.6f s (%5.2f%%)\n",
                metricas_mpi.tiempo_comunicacion,
                metricas_mpi.porcentaje_comunicacion);
         printf("   Iteraciones         : %12d\n", metricas_mpi.iteraciones);
         printf("   Rendimiento         : %12.6f GFlops\n\n", metricas_mpi.gflops);
-        
+
         // --- OpenMP ---
         printf("2. OpenMP (%d Threads):\n", num_threads);
         printf("   Tiempo Total        : %12.6f s\n", metricas_omp.tiempo_total);
         printf("   Iteraciones         : %12d\n", metricas_omp.iteraciones);
         printf("   Rendimiento         : %12.6f GFlops\n\n", metricas_omp.gflops);
-        
+
         // --- Métricas Comparativas (CORRECTO: vs Secuencial) ---
         double speedup_mpi = metricas_seq.tiempo_total / metricas_mpi.tiempo_total;
         double eficiencia_mpi = (speedup_mpi / size) * 100.0;
-        
+
         double speedup_omp = metricas_seq.tiempo_total / metricas_omp.tiempo_total;
         double eficiencia_omp = (speedup_omp / num_threads) * 100.0;
-        
+
         printf("========================================\n");
         printf("  MÉTRICAS DE RENDIMIENTO\n");
         printf("========================================\n");
@@ -547,7 +547,7 @@ int main(int argc, char** argv) {
         printf("\nOpenMP:\n");
         printf("  Speedup    (Tseq/Tomp) : %.4fx\n", speedup_omp);
         printf("  Eficiencia (Sp/p×100)  : %.2f%%\n", eficiencia_omp);
-        
+
         printf("\n----------------------------------------\n");
         printf("Comparación MPI vs OpenMP:\n");
         if (metricas_mpi.tiempo_total < metricas_omp.tiempo_total) {
@@ -557,18 +557,18 @@ int main(int argc, char** argv) {
             double ventaja = metricas_mpi.tiempo_total / metricas_omp.tiempo_total;
             printf("✓ OpenMP es %.2fx más rápido que MPI\n", ventaja);
         }
-        
+
         if (metricas_mpi.porcentaje_comunicacion > 30.0) {
-            printf("\n⚠ ADVERTENCIA: Overhead de comunicación alto (%.1f%%)\n", 
+            printf("\n⚠ ADVERTENCIA: Overhead de comunicación alto (%.1f%%)\n",
                    metricas_mpi.porcentaje_comunicacion);
             printf("  Recomendaciones:\n");
             printf("  - Aumentar tamaño de malla (imax/kmax)\n");
             printf("  - Reducir número de procesos MPI\n");
         }
         printf("========================================\n\n");
-        
+
         // Exportar CSV
-        exportar_csv(size, num_threads, metricas_seq, metricas_mpi, metricas_omp, 
+        exportar_csv(size, num_threads, metricas_seq, metricas_mpi, metricas_omp,
                      speedup_mpi, eficiencia_mpi, speedup_omp, eficiencia_omp);
         printf("✓ Resultados exportados a: resultados_benchmark.csv\n\n");
     }
