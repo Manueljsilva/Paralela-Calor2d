@@ -4,8 +4,13 @@
 #SBATCH --error=logs/omp_bench_%j.err
 #SBATCH --time=01:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=128
-#SBATCH --partition=all   # targets ag001
+#SBATCH --cpus-per-task=64        # restricted to 64 cores
+#SBATCH --partition=all
+
+#SBATCH --mail-user=alejandro.ore@utec.edu.pe
+#SBATCH --mail-type=BEGIN,END,FAIL,TIME_LIMIT_50
+
+set -e
 
 mkdir -p plots logs
 rm -f plots/omp_results.csv
@@ -14,7 +19,7 @@ rm -f plots/omp_results.csv
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 
-for t in 1 2 4 8 16 32 64 128; do
+for t in 1 2 4 8 16 32 64; do
     echo "--- Threads = $t ---"
     export OMP_NUM_THREADS=$t
     ./out/omp_bench

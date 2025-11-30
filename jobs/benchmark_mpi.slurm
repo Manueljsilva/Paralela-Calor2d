@@ -3,16 +3,19 @@
 #SBATCH --output=logs/mpi_bench_%j.out
 #SBATCH --error=logs/mpi_bench_%j.err
 #SBATCH --time=01:00:00
-#SBATCH --nodes=1-8
+#SBATCH --nodes=1-4
 #SBATCH --ntasks-per-node=16
 #SBATCH --partition=all
+
+#SBATCH --mail-user=alejandro.ore@utec.edu.pe
+#SBATCH --mail-type=BEGIN,END,FAIL,TIME_LIMIT_50
 
 mkdir -p plots logs
 rm -f plots/mpi_results.csv
 
 CORES_PER_NODE=16
 
-for np in 1 2 4 8 16 32 64 128; do
+for np in 1 2 4 8 16 32 64; do
     echo "--- Processes = $np ---"
 
     if [ $np -le $CORES_PER_NODE ]; then
