@@ -180,6 +180,9 @@ benchmark_mpi: $(OUTDIR)/mpi_bench
 benchmark_all: benchmark_seq benchmark_omp benchmark_mpi
 	@echo "✓ All benchmarks completed."
 
+compile_benchmarks: $(OUTDIR)/seq_bench $(OUTDIR)/omp_bench $(OUTDIR)/mpi_bench
+	@echo "✓ Compiled all benchmarks"
+
 ###############
 
 help:
