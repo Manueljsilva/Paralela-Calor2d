@@ -49,6 +49,7 @@ int main() {
     }
 
     printf("  Transmision de calor 2D - Version 1\n");
+    printf("  Paralelizacion: OpenMP\n");
     printf("\ndx = %12.4g, dy = %12.4g, dt = %12.4g, eps = %12.4g\n",
            dx, dy, dt, eps);
     
@@ -67,9 +68,11 @@ int main() {
     {
         dphimax = 0.;
         
-        #pragma omp parallel for collapse(2) private(dphi) reduction(max:dphimax) schedule(static)
+        // Paralelizacion del bucle de calculo
+        #pragma omp parallel for private(i, dphi) reduction(max:dphimax) schedule(static)
         for (k = 1; k < kmax; k++)
         {
+            
             for (i = 1; i < imax; i++) 
             {
                 dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i + 
@@ -80,8 +83,8 @@ int main() {
             }
         }
 
-        // Paralelizacion del bucle de actualizacion con collapse(2)
-        #pragma omp parallel for collapse(2) schedule(static)
+        // Paralelizacion del bucle de actualizacion
+        #pragma omp parallel for private(i) schedule(static)
         for (k = 1; k < kmax; k++)
         {
             for (i = 1; i < imax; i++)
