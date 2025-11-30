@@ -2,7 +2,7 @@
 #SBATCH --job-name=heat_openmp
 #SBATCH --output=slurm-out/heat_openmp-%j.out
 #SBATCH --error=slurm-out/heat_openmp-%j.err
-#SBATCH --partition=normal          # change to your partition/queue
+#SBATCH --partition=all
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                  # 1 process
 #SBATCH --cpus-per-task=8           # number of OpenMP threads

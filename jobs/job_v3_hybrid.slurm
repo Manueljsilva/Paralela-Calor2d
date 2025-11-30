@@ -2,7 +2,7 @@
 #SBATCH --job-name=heat_hybrid
 #SBATCH --output=slurm-out/heat_hybrid-%j.out
 #SBATCH --error=slurm-out/heat_hybrid-%j.err
-#SBATCH --partition=normal
+#SBATCH --partition=all
 #SBATCH --nodes=2                  # number of nodes
 #SBATCH --ntasks-per-node=4        # MPI ranks per node
 #SBATCH --cpus-per-task=8          # cores reserved per MPI rank (for OpenMP threads)

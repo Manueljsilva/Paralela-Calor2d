@@ -2,7 +2,7 @@
 #SBATCH --job-name=heat_mpi
 #SBATCH --output=slurm-out/heat_mpi-%j.out
 #SBATCH --error=slurm-out/heat_mpi-%j.err
-#SBATCH --partition=normal
+#SBATCH --partition=all
 #SBATCH --nodes=2                     # number of nodes
 #SBATCH --ntasks-per-node=8           # MPI ranks per node
 #SBATCH --time=01:00:00

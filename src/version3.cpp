@@ -4,17 +4,25 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
-#include <vector>
 
 // Macros de utilidad
 #define min(A, B) ((A) < (B) ? (A) : (B))
 #define max(A, B) ((A) > (B) ? (A) : (B))
 
 // Constantes del problema
-const int imax = 80;
-const int kmax = 80;
-const int itmax = 20000;
-const double eps = 1.0e-08;
+#define CLUSTER_BENCHMARK
+
+#ifdef CLUSTER_BENCHMARK
+    const int imax = 3000;       // 37x original size
+    const int kmax = 3000;       // 37x original size
+    const int itmax = 50000;     // large number of iterations
+    const double eps = 1e-10;    // strict tolerance
+#else
+    const int imax = 80;
+    const int kmax = 80;
+    const int itmax = 20000;
+    const double eps = 1.0e-08;
+#endif
 
 // Tags MPI
 #define TAG_UP   100
