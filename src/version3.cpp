@@ -10,7 +10,7 @@
 #define max(A, B) ((A) > (B) ? (A) : (B))
 
 // Constantes del problema
-#define CLUSTER_BENCHMARK
+//#define CLUSTER_BENCHMARK
 
 #ifdef CLUSTER_BENCHMARK
     const int imax = 3840;
@@ -65,6 +65,74 @@ long long calcular_flops(int filas, int columnas, int iteraciones) {
 
     long long puntos_internos = (long long)(filas - 1) * (columnas - 1);
     return puntos_internos * iteraciones * 19LL;
+}
+
+// ======================================================
+// FUNCIÓN 0: SOLUCIONADOR SECUENCIAL (BASELINE)
+MetricasSecuencial ejecutar_secuencial() {
+    double phi[imax + 1][kmax + 1], phin[imax][kmax];
+    double dx, dy, dx2, dy2, dx2i, dy2i, dt, dphi, dphimax;
+    int i, k, it;
+
+    dx = 1.0 / kmax;
+    dy = 1.0 / imax;
+    dx2 = dx * dx;
+    dy2 = dy * dy;
+    dx2i = 1.0 / dx2;
+    dy2i = 1.0 / dy2;
+    dt = min(dx2, dy2) / 4.0;
+
+    // Inicialización
+    for (k = 0; k < kmax; k++)
+        for (i = 1; i < imax; i++)
+            phi[i][k] = 0.0;
+
+    for (i = 0; i <= imax; i++)
+        phi[i][kmax] = 1.0;
+
+    phi[0][0] = 0.0;
+    phi[imax][0] = 0.0;
+
+    for (k = 1; k < kmax; k++) {
+        phi[0][k] = phi[0][k - 1] + dx;
+        phi[imax][k] = phi[imax][k - 1] + dx;
+    }
+
+    double t_inicio = omp_get_wtime();
+
+    // Bucle temporal sin paralelización
+    for (it = 1; it <= itmax; it++) {
+        dphimax = 0.;
+
+        for (k = 1; k < kmax; k++) {
+            for (i = 1; i < imax; i++) {
+                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i +
+                       (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
+                dphi = dphi * dt;
+                dphimax = max(dphimax, dphi);
+                phin[i][k] = phi[i][k] + dphi;
+            }
+        }
+
+        for (k = 1; k < kmax; k++) {
+            for (i = 1; i < imax; i++) {
+                phi[i][k] = phin[i][k];
+            }
+        }
+
+        if (dphimax < eps) break;
+    }
+
+    double t_fin = omp_get_wtime();
+
+    MetricasSecuencial metricas;
+    metricas.tiempo_total = t_fin - t_inicio;
+    metricas.iteraciones = it;
+
+    long long flops = calcular_flops(imax, kmax, it);
+    metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
+
+    return metricas;
 }
 
 // ======================================================
@@ -265,74 +333,6 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
     metricas.porcentaje_comunicacion = (t_comunicacion_total / metricas.tiempo_total) * 100.0;
-
-    return metricas;
-}
-
-// ======================================================
-// FUNCIÓN 0: SOLUCIONADOR SECUENCIAL (BASELINE)
-MetricasSecuencial ejecutar_secuencial() {
-    double phi[imax + 1][kmax + 1], phin[imax][kmax];
-    double dx, dy, dx2, dy2, dx2i, dy2i, dt, dphi, dphimax;
-    int i, k, it;
-
-    dx = 1.0 / kmax;
-    dy = 1.0 / imax;
-    dx2 = dx * dx;
-    dy2 = dy * dy;
-    dx2i = 1.0 / dx2;
-    dy2i = 1.0 / dy2;
-    dt = min(dx2, dy2) / 4.0;
-
-    // Inicialización
-    for (k = 0; k < kmax; k++)
-        for (i = 1; i < imax; i++)
-            phi[i][k] = 0.0;
-
-    for (i = 0; i <= imax; i++)
-        phi[i][kmax] = 1.0;
-
-    phi[0][0] = 0.0;
-    phi[imax][0] = 0.0;
-
-    for (k = 1; k < kmax; k++) {
-        phi[0][k] = phi[0][k - 1] + dx;
-        phi[imax][k] = phi[imax][k - 1] + dx;
-    }
-
-    double t_inicio = omp_get_wtime();
-
-    // Bucle temporal sin paralelización
-    for (it = 1; it <= itmax; it++) {
-        dphimax = 0.;
-
-        for (k = 1; k < kmax; k++) {
-            for (i = 1; i < imax; i++) {
-                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i +
-                       (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
-                dphi = dphi * dt;
-                dphimax = max(dphimax, dphi);
-                phin[i][k] = phi[i][k] + dphi;
-            }
-        }
-
-        for (k = 1; k < kmax; k++) {
-            for (i = 1; i < imax; i++) {
-                phi[i][k] = phin[i][k];
-            }
-        }
-
-        if (dphimax < eps) break;
-    }
-
-    double t_fin = omp_get_wtime();
-
-    MetricasSecuencial metricas;
-    metricas.tiempo_total = t_fin - t_inicio;
-    metricas.iteraciones = it;
-
-    long long flops = calcular_flops(imax, kmax, it);
-    metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
 
     return metricas;
 }
