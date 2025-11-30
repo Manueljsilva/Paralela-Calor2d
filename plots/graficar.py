@@ -137,7 +137,7 @@ plt.savefig('graficas_rendimiento.png', dpi=300, bbox_inches='tight')
 print("✓ Gráfica guardada como: graficas_rendimiento.png")
 
 # Mostrar gráfica
-plt.show()
+# plt.show()
 
 # ============================================
 # TABLA RESUMEN

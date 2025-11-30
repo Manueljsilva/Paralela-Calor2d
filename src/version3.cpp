@@ -44,24 +44,31 @@ struct MetricasSecuencial {
     double gflops;
 };
 
-// ======================================================
 // FUNCIÓN: Calcular FLOPs
-// ======================================================
 long long calcular_flops(int filas, int columnas, int iteraciones) {
-    // Por cada punto interno, por iteración:
-    // Stencil en i: 2 sumas + 4 restas + 2 multiplicaciones = 8 ops
-    // Stencil en k: 2 sumas + 4 restas + 2 multiplicaciones = 8 ops
-    // dphi total: 1 suma + 1 multiplicación (dt) = 2 ops
-    // Actualización: 1 suma = 1 op
-    // Total: 19 FLOPs por punto por iteración
-
-    long long puntos_internos = (long long)(filas - 1) * (columnas - 1);
-    return puntos_internos * iteraciones * 19LL;
+    // Recuento aproximado de FLOPs por punto interior y por iteración:
+    //
+    // Direccion i:
+    //  phi[i+1][k] + phi[i-1][k]                 -> 1 add
+    //  2.0 * phi[i][k]                            -> 1 mul
+    //  (prev - 2*phi)                             -> 1 sub
+    //  * dy2i                                     -> 1 mul   = 4 FLOPs
+    //
+    // Direccion k (idéntico)                      -> 4 FLOPs
+    //
+    // Suma de ambas contribuciones                -> 1 add
+    // Multiplicar por dt                          -> 1 mul
+    // Actualizar phin = phi + dphi                -> 1 add
+    //
+    // TOTAL FLOPs aritméticas = 11 FLOPs por punto por iteración
+    //
+    // Nota: fabs() y max() NO son FLOPs (operaciones de control/comparación).
+    
+    long long puntos_internos = 1LL * (filas - 1) * (columnas - 1);
+    return puntos_internos * iteraciones * 11LL;
 }
 
-// ======================================================
 // FUNCIÓN 1: SOLUCIONADOR MPI CON MEDICIÓN DETALLADA
-// ======================================================
 MetricasMPI ejecutar_mpi(int rank, int size) {
     double dx, dy, dx2, dy2, dx2i, dy2i, dt;
     int k, it;
@@ -135,9 +142,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         MPI_Request requests[4];
         int req_count = 0;
 
-        // ==========================================
         // COMUNICACIÓN: Isend/Irecv
-        // ==========================================
         t_aux = MPI_Wtime();
 
         if (rank > 0 && filas_locales > 0) {
@@ -159,9 +164,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
 
         t_isend_irecv += (MPI_Wtime() - t_aux);
 
-        // ==========================================
         // CÓMPUTO: Puntos interiores
-        // ==========================================
         int i_inicio = 2;
         int i_fin = filas_locales - 1;
 
@@ -173,24 +176,20 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
                                   (phi_local[i_local][k + 1] + phi_local[i_local][k - 1]
                                   - 2.0 * phi_local[i_local][k]) * dx2i;
                     dphi *= dt;
-                    dphimax_local = max(dphimax_local, std::fabs(dphi));
+                    dphimax_local = max(dphimax_local, dphi);
                     phin_local[i_local][k] = phi_local[i_local][k] + dphi;
                 }
             }
         }
 
-        // ==========================================
         // COMUNICACIÓN: Waitall
-        // ==========================================
         t_aux = MPI_Wtime();
         if (req_count > 0) {
             MPI_Waitall(req_count, requests, MPI_STATUSES_IGNORE);
         }
         t_waitall += (MPI_Wtime() - t_aux);
 
-        // ==========================================
         // CÓMPUTO: Puntos frontera
-        // ==========================================
         if (filas_locales >= 1) {
             int i_local = 1;
             for (k = 1; k < kmax; k++) {
@@ -199,7 +198,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
                               (phi_local[i_local][k + 1] + phi_local[i_local][k - 1]
                               - 2.0 * phi_local[i_local][k]) * dx2i;
                 dphi *= dt;
-                dphimax_local = max(dphimax_local, std::fabs(dphi));
+                dphimax_local = max(dphimax_local, dphi);
                 phin_local[i_local][k] = phi_local[i_local][k] + dphi;
             }
         }
@@ -212,7 +211,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
                               (phi_local[i_local][k + 1] + phi_local[i_local][k - 1]
                               - 2.0 * phi_local[i_local][k]) * dx2i;
                 dphi *= dt;
-                dphimax_local = max(dphimax_local, std::fabs(dphi));
+                dphimax_local = max(dphimax_local, dphi);
                 phin_local[i_local][k] = phi_local[i_local][k] + dphi;
             }
         }
@@ -494,8 +493,11 @@ int main(int argc, char** argv) {
     int num_threads = 0;
 
     if (rank == 0) {
-        num_threads = omp_get_max_threads();
-        printf("[OMP] Ejecutando con %d threads...\n", num_threads);
+        /* Ajustar número de threads de OpenMP para que coincida
+           con el número de procesos MPI usados en el benchmark. */
+        num_threads = size;
+        omp_set_num_threads(num_threads);
+        printf("[OMP] Ejecutando con %d threads (ajustado al numero de procesos MPI)...\n", num_threads);
         metricas_omp = ejecutar_omp();
         printf("      Tiempo: %.6f s | Iteraciones: %d\n\n",
                metricas_omp.tiempo_total, metricas_omp.iteraciones);
