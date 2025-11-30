@@ -4,6 +4,7 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <vector>
 
 // Macros de utilidad
 #define min(A, B) ((A) < (B) ? (A) : (B))
@@ -79,14 +80,11 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
     int filas_base = filas_totales / size;
     int filas_extra = filas_totales % size;
     int filas_locales;
-    int fila_inicio_global;
 
     if (rank < filas_extra) {
         filas_locales = filas_base + 1;
-        fila_inicio_global = rank * filas_locales + 1;
     } else {
         filas_locales = filas_base;
-        fila_inicio_global = rank * filas_base + filas_extra + 1;
     }
 
     // Allocación
@@ -265,7 +263,6 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
 
 // ======================================================
 // FUNCIÓN 0: SOLUCIONADOR SECUENCIAL (BASELINE)
-// ======================================================
 MetricasSecuencial ejecutar_secuencial() {
     double phi[imax + 1][kmax + 1], phin[imax][kmax];
     double dx, dy, dx2, dy2, dx2i, dy2i, dt, dphi, dphimax;
@@ -332,9 +329,7 @@ MetricasSecuencial ejecutar_secuencial() {
     return metricas;
 }
 
-// ======================================================
 // FUNCIÓN 2: SOLUCIONADOR OPENMP CON MEDICIÓN
-// ======================================================
 MetricasOMP ejecutar_omp() {
     double phi[imax + 1][kmax + 1], phin[imax][kmax];
     double dx, dy, dx2, dy2, dx2i, dy2i, dt, dphi, dphimax;
@@ -402,9 +397,7 @@ MetricasOMP ejecutar_omp() {
     return metricas;
 }
 
-// ======================================================
 // FUNCIÓN: Exportar CSV para análisis
-// ======================================================
 void exportar_csv(int num_procesos, int num_threads, 
                   const MetricasSecuencial& seq,
                   const MetricasMPI& mpi, const MetricasOMP& omp,
@@ -439,9 +432,7 @@ void exportar_csv(int num_procesos, int num_threads,
     archivo.close();
 }
 
-// ======================================================
 // MAIN: BENCHMARK Y ANÁLISIS
-// ======================================================
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
@@ -456,9 +447,7 @@ int main(int argc, char** argv) {
         printf("========================================\n\n");
     }
 
-    // ==========================================
     // FASE 0: EJECUTAR SECUENCIAL (Baseline)
-    // ==========================================
     MetricasSecuencial metricas_seq;
     
     if (rank == 0) {
@@ -475,9 +464,7 @@ int main(int argc, char** argv) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // ==========================================
     // FASE 1: EJECUTAR MPI
-    // ==========================================
     if (rank == 0) printf("[MPI] Ejecutando con %d procesos...\n", size);
     MetricasMPI metricas_mpi_local = ejecutar_mpi(rank, size);
 
@@ -514,9 +501,7 @@ int main(int argc, char** argv) {
                metricas_omp.tiempo_total, metricas_omp.iteraciones);
     }
 
-    // ==========================================
     // FASE 3: ANÁLISIS Y REPORTE
-    // ==========================================
     if (rank == 0) {
         printf("========================================\n");
         printf("  RESULTADOS DETALLADOS\n");
