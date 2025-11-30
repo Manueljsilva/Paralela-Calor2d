@@ -1,26 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name=benchmark
-#SBATCH --output=slurm-out/benchmark-%j.out
-#SBATCH --error=slurm-out/benchmark-%j.err
-#SBATCH --partition=all           # choose a big partition with more nodes
-#SBATCH --nodes=5                 # number of nodes to use
-#SBATCH --ntasks-per-node=8       # MPI ranks per node
-#SBATCH --time=02:00:00           # estimated runtime
-#SBATCH --mem-per-cpu=4G          # memory per CPU
-#SBATCH --exclusive               # optional: no other jobs on these nodes
+#SBATCH --job-name=heat_benchmark
+#SBATCH --output=slurm-out/heat_benchmark-%j.out
+#SBATCH --error=slurm-out/heat_benchmark-%j.err
+#SBATCH --partition=all
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=96       # Total MPI ranks: 192
+#SBATCH --time=04:00:00
+#SBATCH --mem-per-cpu=2G
 
-# Load modules if needed
-# module load mpi
+module load mpi
+module load gcc   # if needed for OpenMP
 
-# Total MPI ranks
-TOTAL_RANKS=$(( SLURM_NNODES * SLURM_NTASKS_PER_NODE ))
+echo "Starting benchmark (MPI + OpenMP)..."
 
-# Set OpenMP threads per rank
-export OMP_NUM_THREADS=4
-
-echo "Running hybrid MPI+OpenMP benchmark:"
-echo "Nodes: $SLURM_NNODES, MPI ranks/node: $SLURM_NTASKS_PER_NODE, Total ranks: $TOTAL_RANKS"
-echo "OpenMP threads per rank: $OMP_NUM_THREADS"
-
-# Run the benchmark
-srun -n $TOTAL_RANKS ./out/version3
+# Run the benchmark executable (handles both MPI and OpenMP internally)
+# MPI stage: uses all ranks
+# OpenMP stage: only rank 0 runs with OMP_NUM_THREADS
+export OMP_NUM_THREADS=96   # max threads rank 0 will use
+srun -n 192 ./out/version3
