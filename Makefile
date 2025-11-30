@@ -87,7 +87,7 @@ benchmark-csv: $(OUTDIR)/version3
 	@rm -f plots/graficas_rendimiento.png
 	@for np in 1 2 4 8 16; do \
 		printf "%b%d%b\n" "$(AZUL)--- p=" $$np " ---$(RESET)"; \
-		mpirun -np $$np ./$(OUTDIR)/version3; \
+		OMP_NUM_THREADS=$$np mpirun -np $$np ./$(OUTDIR)/version3; \
 	done
 	@printf "%b\n" "$(VERDE)✓ CSV generado: resultados_benchmark.csv$(RESET)"
 
@@ -129,6 +129,61 @@ clean:
 	@rm -f plots/graficas_rendimiento.png
 
 rebuild: clean all
+
+###############
+BENCHDIR = $(SRCDIR)/benchmark
+
+# ======================================================
+# Build rules
+# ======================================================
+$(OUTDIR)/seq_bench: $(BENCHDIR)/seq_bench.cpp $(BENCHDIR)/common.hpp | $(OUTDIR)
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
+
+$(OUTDIR)/omp_bench: $(BENCHDIR)/omp_bench.cpp $(BENCHDIR)/common.hpp | $(OUTDIR)
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
+
+$(OUTDIR)/mpi_bench: $(BENCHDIR)/mpi_bench.cpp $(BENCHDIR)/common.hpp | $(OUTDIR)
+	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o $@ $<
+
+# ======================================================
+# Benchmarks (build + run multiple configurations)
+# ======================================================
+.PHONY: benchmark_seq benchmark_omp benchmark_mpi clean
+
+benchmark_seq: $(OUTDIR)/seq_bench
+	@echo "Running SEQUENTIAL benchmark..."
+	@rm -f plots/seq_results.csv
+	@mkdir -p plots
+	./$(OUTDIR)/seq_bench $$t
+	@echo "✓ SEQUENTIAL CSV generated: plots/seq_bench.csv"
+
+benchmark_omp: $(OUTDIR)/omp_bench
+	@echo "Running OpenMP benchmark..."
+	@rm -f plots/omp_results.csv
+	@mkdir -p plots
+	@for t in 1 2 4 8 16 32; do \
+		echo "--- Threads = $$t ---"; \
+		OMP_NUM_THREADS=$$t ./$(OUTDIR)/omp_bench; \
+	done
+	@echo "✓ OpenMP CSV generated: plots/omp_bench.csv"
+
+benchmark_mpi: $(OUTDIR)/mpi_bench
+	@echo "Running MPI benchmark..."
+	@rm -f plots/mpi_results.csv
+	@mkdir -p plots
+	@for np in 1 2 4 8 16 32; do \
+		echo "--- Processes = $$np ---"; \
+		mpirun -np $$np ./$(OUTDIR)/mpi_bench; \
+	done
+	@echo "✓ MPI CSV generated: plots/mpi_bench.csv"
+
+benchmark_all: benchmark_seq benchmark_omp benchmark_mpi
+	@echo "✓ All benchmarks completed."
+
+compile_benchmarks: $(OUTDIR)/seq_bench $(OUTDIR)/omp_bench $(OUTDIR)/mpi_bench
+	@echo "✓ Compiled all benchmarks"
+
+###############
 
 help:
 	@printf "%b\n" "$(AZUL)Makefile para Ecuación de Calor 2D$(RESET)"

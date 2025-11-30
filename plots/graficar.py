@@ -7,9 +7,12 @@ Genera: Speedup vs Procesos, Eficiencia vs Procesos, GFlops vs Procesos
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from merge import merge_benchmarks
 
 # Leer datos del CSV
-df = pd.read_csv('resultados_benchmark.csv')
+#df = pd.read_csv('resultados_benchmark.csv')
+print("Merging graphs...")
+df = merge_benchmarks('seq_results.csv', 'omp_results.csv', 'mpi_results.csv')
 
 # Configuración de estilo
 plt.style.use('seaborn-v0_8-darkgrid')
