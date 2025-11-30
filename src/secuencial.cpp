@@ -1,88 +1,108 @@
+#include "common.hpp"
+#include <cmath>
 #include <iostream>
 #include <ctime>
+#include <omp.h>
 
-#define min(A, B) ((A) < (B) ? (A) : (B))
-#define max(A, B) ((A) > (B) ? (A) : (B))
+MetricasSecuencial ejecutar_secuencial() {
+    // Grid sizes
+    const int NI = imax + 1;
+    const int NK = kmax + 1;
 
-const int imax = 80;
-const int kmax = 80;
-const int itmax = 20000;
+    // Allocate arrays on heap
+    double *phi  = new double[(size_t)NI * NK];
+    double *phin = new double[(size_t)NI * NK];
+
+    auto idx = [&](int i, int k) -> size_t { return (size_t)i * NK + k; };
+
+    // Grid spacing
+    double dx = 1.0 / kmax;
+    double dy = 1.0 / imax;
+    double dx2 = dx * dx;
+    double dy2 = dy * dy;
+    double dx2i = 1.0 / dx2;
+    double dy2i = 1.0 / dy2;
+    double dt = std::min(dx2, dy2) / 4.0;
+
+    // Convergence tolerance
+    double eps = 1e-8;
+
+    // ---- Initialization ----
+    // Set interior points to zero
+    for (int i = 0; i < NI; ++i)
+        for (int k = 0; k < NK; ++k)
+            phi[idx(i,k)] = 0.0;
+
+    // Set boundary at k = kmax
+    for (int i = 0; i <= imax; ++i)
+        phi[idx(i,kmax)] = 1.0;
+
+    // Set corner values
+    phi[idx(0,0)] = 0.0;
+    phi[idx(imax,0)] = 0.0;
+
+    // Set left and right edges
+    for (int k = 1; k < kmax; ++k) {
+        phi[idx(0,k)] = phi[idx(0,k-1)] + dx;
+        phi[idx(imax,k)] = phi[idx(imax,k-1)] + dx;
+    }
+
+    // ---- Print initial info ----
+    std::cout << "\nTransmision de calor 2d\n";
+    std::cout << "dx = " << dx << ", dy = " << dy << ", dt = " << dt << ", eps = " << eps << "\n";
+
+    // ---- Iteration ----
+    int it;
+    double t_start = omp_get_wtime();
+    for (it = 1; it <= itmax; ++it) {
+        double dphimax = 0.0;
+
+        // Update interior points
+        for (int k = 1; k < kmax; ++k) {
+            for (int i = 1; i < imax; ++i) {
+                double dphi =
+                    (phi[idx(i+1,k)] + phi[idx(i-1,k)] - 2.0 * phi[idx(i,k)]) * dy2i +
+                    (phi[idx(i,k+1)] + phi[idx(i,k-1)] - 2.0 * phi[idx(i,k)]) * dx2i;
+                dphi *= dt;
+                if (dphi > dphimax) dphimax = dphi;
+                phin[idx(i,k)] = phi[idx(i,k)] + dphi;
+            }
+        }
+
+        // Copy back
+        for (int k = 1; k < kmax; ++k)
+            for (int i = 1; i < imax; ++i)
+                phi[idx(i,k)] = phin[idx(i,k)];
+
+        if (dphimax < eps) {
+            break;
+        }
+    }
+    double t_end = omp_get_wtime();
+
+    // ---- Print metrics ----
+    std::cout << "\n" << it << " iteraciones\n";
+    std::cout << "CPU tiempo = " << t_end - t_start << " sec\n";
+
+    MetricasSecuencial m;
+    m.tiempo_total = t_end - t_start;
+    m.iteraciones = it;
+    long long flops = calcular_flops(imax, kmax, it);
+    m.gflops = (double)flops / (m.tiempo_total * 1e9);
+
+    delete[] phi;
+    delete[] phin;
+    return m;
+}
 
 int main() {
-    double eps = 1.0e-08;
-    double phi[imax + 1][kmax + 1], phin[imax][kmax];
-    double dx, dy, dx2, dy2, dx2i, dy2i, dt, dphi, dphimax;
-    int i, k, it;
+    std::cout << "SEQ benchmark starting (this may take a while)...\n";
+    MetricasSecuencial seq = ejecutar_secuencial();
+    std::cout << "SEQ done: time=" << seq.tiempo_total
+              << "s, it=" << seq.iteraciones
+              << ", gflops=" << seq.gflops << "\n";
 
-    clock_t t;
-
-    dx = 1.0 / kmax;
-    dy = 1.0 / imax;
-    dx2 = dx * dx;
-    dy2 = dy * dy;
-    dx2i = 1.0 / dx2;
-    dy2i = 1.0 / dy2;
-    dt = min(dx2, dy2) / 4.0;
-    /* valores iniciales */
-
-    for (k = 0; k < kmax; k++)
-    {
-        for (i = 1; i < imax; i++)
-        {
-            phi[i][k] = 0.0;
-        }
-    }
-
-    for (i = 0; i <= imax; i++)
-    {
-        phi[i][kmax] = 1.0;
-    }
-
-    phi[0][0] = 0.0;
-    phi[imax][0] = 0.0;
-
-    for (k = 1; k < kmax; k++)
-    {
-        phi[0][k] = phi[0][k - 1] + dx;
-        phi[imax][k] = phi[imax][k - 1] + dx;
-    }
-
-    printf("\nTransmision de calor 2d\n");
-    printf("\ndx = %12.4g, dy = %12.4g, dt = %12.4g, eps = %12.4g\n",
-           dx, dy, dt, eps);
-
-    t = clock();
-
-    /* iteracion */
-    for (it = 1; it <= itmax; it++)
-    {
-        dphimax = 0.;
-        for (k = 1; k < kmax; k++) // paralizar este bucle
-        {
-
-            for (i = 1; i < imax; i++) 
-            {
-                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i + (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
-                dphi = dphi * dt;
-                dphimax = max(dphimax, dphi);
-                phin[i][k] = phi[i][k] + dphi;
-            }
-        }
-
-        /* se almacenan valores */
-        for (k = 1; k < kmax; k++)
-        {
-            for (i = 1; i < imax; i++)
-            {
-                phi[i][k] = phin[i][k];
-            }
-        }
-        if (dphimax < eps)
-            break;
-    }
-
-    t = clock();
-    printf("\n%d iteraciones\n", it);
-    printf("\nCPU tiempo = %#12.4g sec\n", t / 1000000.0);
+    export_sec_csv("plots/sec_results.csv", seq);
+    std::cout << "Wrote plots/sec_results.csv\n";
     return 0;
 }

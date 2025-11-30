@@ -7,10 +7,6 @@
 #include <filesystem>
 #include <iostream>
 
-// Macros de utilidad
-#define _min(A, B) ((A) < (B) ? (A) : (B))
-#define _max(A, B) ((A) > (B) ? (A) : (B))
-
 // Constantes del problema
 //#define CLUSTER_BENCHMARK
 
@@ -70,7 +66,7 @@ inline void ensure_dir_for(const std::string &filepath) {
 // Exporters (each program uses only the relevant one)
 
 // seq: Tiempo, Iteraciones, GFlops
-inline void export_seq_csv(const std::string &filepath, const MetricasSecuencial &seq) {
+inline void export_sec_csv(const std::string &filepath, const MetricasSecuencial &seq) {
     ensure_dir_for(filepath);
     std::ofstream f(filepath, std::ios::app);
     if (!f.is_open()) { std::cerr << "ERROR: can't open " << filepath << "\n"; return; }

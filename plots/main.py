@@ -4,15 +4,15 @@ Script para generar gráficas de rendimiento desde resultados_benchmark.csv
 Genera: Speedup vs Procesos, Eficiencia vs Procesos, GFlops vs Procesos
 """
 
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from merge import merge_benchmarks
 
 # Leer datos del CSV
-#df = pd.read_csv('resultados_benchmark.csv')
-print("Merging graphs...")
-df = merge_benchmarks('seq_results.csv', 'omp_results.csv', 'mpi_results.csv')
+sec_file = 'plots/sec_results.csv'
+omp_file = 'plots/omp_results.csv'
+mpi_file = 'plots/mpi_results.csv'
+df = merge_benchmarks(sec_file, omp_file, mpi_file)
 
 # Configuración de estilo
 plt.style.use('seaborn-v0_8-darkgrid')
@@ -135,12 +135,13 @@ for i, (p, comm) in enumerate(zip(df['Procesos'], df['Comunicacion_%'])):
                 fontsize=9, color=colors[3])
 
 # Ajustar layout y guardar
+out_fig = 'plots/graficas_rendimiento.png'
 plt.tight_layout()
-plt.savefig('graficas_rendimiento.png', dpi=300, bbox_inches='tight')
-print("✓ Gráfica guardada como: graficas_rendimiento.png")
+plt.savefig(out_fig, dpi=300, bbox_inches='tight')
+print(f"✓ Gráfica guardada como: {out_fig}")
 
 # Mostrar gráfica
-# plt.show()
+plt.show()
 
 # ============================================
 # TABLA RESUMEN

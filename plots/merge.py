@@ -1,7 +1,7 @@
 import pandas as pd
 
-def merge_benchmarks(seq_file: str, omp_file: str, mpi_file: str) -> pd.DataFrame:
-    df_seq = pd.read_csv(seq_file)       # Tiempo,Iteraciones,GFlops
+def merge_benchmarks(sec_file: str, omp_file: str, mpi_file: str) -> pd.DataFrame:
+    df_sec = pd.read_csv(sec_file)       # Tiempo,Iteraciones,GFlops
     df_omp = pd.read_csv(omp_file)       # Threads,TiempoTotal,Iteraciones,GFlops
     df_mpi = pd.read_csv(mpi_file)       # Ranks,TiempoTotal,TiempoComputo,TiempoComunicacion,Iteraciones,GFlops,Comunicacion_%
 
@@ -13,7 +13,7 @@ def merge_benchmarks(seq_file: str, omp_file: str, mpi_file: str) -> pd.DataFram
     for _, row in df_merged.iterrows():
         procesos = int(row["Ranks"])
         threads = int(row["Threads"])
-        t_seq = float(df_seq["Tiempo"].iloc[0])
+        t_seq = float(df_sec["Tiempo"].iloc[0])
         t_mpi = float(row["TiempoTotal_mpi"])
         t_omp = float(row["TiempoTotal_omp"])
         iteraciones = int(row["Iteraciones_mpi"])
@@ -23,7 +23,7 @@ def merge_benchmarks(seq_file: str, omp_file: str, mpi_file: str) -> pd.DataFram
         speedup_omp = t_seq / t_omp
         eficiencia_omp = (speedup_omp / threads) * 100
 
-        gflops_seq = float(df_seq["GFlops"].iloc[0])
+        gflops_seq = float(df_sec["GFlops"].iloc[0])
         gflops_mpi = float(row["GFlops_mpi"])
         gflops_omp = float(row["GFlops_omp"])
         comunicacion = float(row.get("Comunicacion_%", 0.0))

@@ -1,26 +1,14 @@
-#include <iostream>
+#include "common.hpp"
 #include <mpi.h>
 #include <cmath>
-
-#define min(A, B) ((A) < (B) ? (A) : (B))
-#define max(A, B) ((A) > (B) ? (A) : (B))
-
-const int imax = 80;
-const int kmax = 80;
-const int itmax = 20000;
+#include <algorithm>
+#include <iostream>
 
 // Tags para comunicación MPI
 #define TAG_UP   100
 #define TAG_DOWN 101
 
-int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
-
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    double eps = 1.0e-08;
+MetricasMPI ejecutar_mpi(int rank, int size) {
     double dx, dy, dx2, dy2, dx2i, dy2i, dt;
     int k, it;
 
@@ -31,7 +19,7 @@ int main(int argc, char** argv) {
     dy2  = dy * dy;
     dx2i = 1.0 / dx2;
     dy2i = 1.0 / dy2;
-    dt   = min(dx2, dy2) / 4.0;
+    dt   = std::min(dx2, dy2) / 4.0;
 
     // ============================================
     // DESCOMPOSICIÓN DEL DOMINIO EN 1D (POR FILAS)
@@ -143,7 +131,14 @@ int main(int argc, char** argv) {
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
+    // Sincronizar antes de medir
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Variables de medición
     double t_inicio = MPI_Wtime();
+    double t_isend_irecv = 0.0;
+    double t_waitall = 0.0;
+    double t_allreduce = 0.0;
 
     // ============================================
     // BUCLE TEMPORAL PRINCIPAL
@@ -158,8 +153,8 @@ int main(int argc, char** argv) {
         MPI_Request requests[4];
         int req_count = 0;
 
+        double t_aux = MPI_Wtime();
         // Enviar primera fila interior (i_local = 1) al vecino superior
-        // Usando tipo derivado MPI_ROW_TYPE en lugar de MPI_DOUBLE
         if (rank > 0 && filas_locales > 0) {
             MPI_Isend(phi_local[1], 1, MPI_ROW_TYPE,
                       rank - 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
@@ -182,6 +177,7 @@ int main(int argc, char** argv) {
             MPI_Irecv(phi_local[filas_locales + 1], 1, MPI_ROW_TYPE,
                       rank + 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
         }
+        t_isend_irecv += (MPI_Wtime() - t_aux);
 
         // ============================================
         // CÁLCULO DE PUNTOS INTERIORES (sin usar halos)
@@ -200,7 +196,7 @@ int main(int argc, char** argv) {
                          - 2.0 * phi_local[i_local][k]) * dx2i;
 
                     dphi *= dt;
-                    dphimax_local = max(dphimax_local, std::fabs(dphi));
+                    dphimax_local = std::max(dphimax_local, dphi);
                     phin_local[i_local][k] = phi_local[i_local][k] + dphi;
                 }
             }
@@ -209,9 +205,11 @@ int main(int argc, char** argv) {
         // ============================================
         // ESPERAR A QUE LLEGUEN LOS HALOS
         // ============================================
+        t_aux = MPI_Wtime();
         if (req_count > 0) {
             MPI_Waitall(req_count, requests, MPI_STATUSES_IGNORE);
         }
+        t_waitall += (MPI_Wtime() - t_aux);
 
         // ============================================
         // CÁLCULO DE PUNTOS QUE USAN HALOS (primer y último fila local)
@@ -227,7 +225,7 @@ int main(int argc, char** argv) {
                      - 2.0 * phi_local[i_local][k]) * dx2i;
 
                 dphi *= dt;
-                dphimax_local = max(dphimax_local, std::fabs(dphi));
+                dphimax_local = std::max(dphimax_local, dphi);
                 phin_local[i_local][k] = phi_local[i_local][k] + dphi;
             }
         }
@@ -243,7 +241,7 @@ int main(int argc, char** argv) {
                      - 2.0 * phi_local[i_local][k]) * dx2i;
 
                 dphi *= dt;
-                dphimax_local = max(dphimax_local, std::fabs(dphi));
+                dphimax_local = std::max(dphimax_local, dphi);
                 phin_local[i_local][k] = phi_local[i_local][k] + dphi;
             }
         }
@@ -260,23 +258,21 @@ int main(int argc, char** argv) {
         // ============================================
         // REDUCCIÓN GLOBAL PARA CONVERGENCIA
         // ============================================
+        t_aux = MPI_Wtime();
         MPI_Allreduce(&dphimax_local, &dphimax_global,
                       1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        t_allreduce += (MPI_Wtime() - t_aux);
 
         if (dphimax_global < eps) {
             break;
         }
-    }
+    } // for it
 
     double t_fin = MPI_Wtime();
 
-    if (rank == 0) {
-        printf("\n%d iteraciones completadas\n", it);
-        printf("\nTiempo de ejecucion = %12.6f sec\n", t_fin - t_inicio);
-        printf("========================================\n");
-    }
-
-    // Liberar memoria
+    // ============================================
+    // LIMPIEZA DE MEMORIA Y TIPOS
+    // ============================================
     for (int i = 0; i < filas_locales + 2; i++) {
         delete[] phi_local[i];
         delete[] phin_local[i];
@@ -284,8 +280,54 @@ int main(int argc, char** argv) {
     delete[] phi_local;
     delete[] phin_local;
 
-    // Liberar tipo derivado MPI
     MPI_Type_free(&MPI_ROW_TYPE);
+
+    // ============================================
+    // CÁLCULO DE MÉTRICAS
+    // ============================================
+    double t_comunicacion_total = t_isend_irecv + t_waitall + t_allreduce;
+
+    MetricasMPI metricas;
+    metricas.tiempo_total        = t_fin - t_inicio;
+    metricas.tiempo_comunicacion = t_comunicacion_total;
+    metricas.tiempo_computo      = metricas.tiempo_total - t_comunicacion_total;
+    metricas.iteraciones         = it;
+
+    long long flops = calcular_flops(imax, kmax, it);
+    metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
+    metricas.porcentaje_comunicacion = (metricas.tiempo_comunicacion / metricas.tiempo_total) * 100.0;
+
+    return metricas;
+}
+
+// MAIN
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+
+    int rank = 0, size = 1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (rank == 0) std::cout << "MPI benchmark starting with " << size << " ranks...\n";
+
+    MetricasMPI local = ejecutar_mpi(rank, size);
+
+    // Recolectar máximos a rank 0 (idéntico a version3)
+    MetricasMPI global;
+    MPI_Reduce(&local.tiempo_total, &global.tiempo_total, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local.tiempo_computo, &global.tiempo_computo, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local.tiempo_comunicacion, &global.tiempo_comunicacion, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        global.iteraciones = local.iteraciones;
+        long long flops = calcular_flops(imax, kmax, global.iteraciones);
+        global.gflops = (double)flops / (global.tiempo_total * 1e9);
+        global.porcentaje_comunicacion = (global.tiempo_comunicacion / global.tiempo_total) * 100.0;
+
+        // Export CSV using the same helper as the other bench pieces
+        export_mpi_csv("plots/mpi_results.csv", size, global);
+        std::cout << "MPI done. Wrote plots/mpi_results.csv\n";
+    }
 
     MPI_Finalize();
     return 0;

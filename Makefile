@@ -1,9 +1,8 @@
-# Makefile para Ecuación de Calor 2D con colores más consistentes
-# Compila los binarios en ./out y proporciona reglas para ejecutar.
+# Makefile para Ecuación de Calor 2D
 
 # Compiladores
-CXX := g++
-MPICXX := mpic++
+CXX      := g++
+MPICXX   := mpic++
 
 # Flags
 CXXFLAGS := -Wall
@@ -11,15 +10,17 @@ OMPFLAGS := -fopenmp
 MPIFLAGS :=
 
 # Salida y ficheros
-FILES := secuencial version1 version2 version3
+FILES   := secuencial version1 version2
 
-SRCDIR := src
-OUTDIR := out
+SRCDIR  := src
+OUTDIR  := out
 TARGETS := $(addprefix $(OUTDIR)/,$(FILES))
 SRCFILES := $(addprefix $(SRCDIR)/,$(addsuffix .cpp,$(FILES)))
 
-# Parámetro por defecto para mpirun
+# Parámetro por defecto para MPI
 NP ?= 4
+# Parámetro por defecto para OpenMP
+OMP_THREADS ?= 4
 
 # Colores ANSI
 VERDE := \033[0;32m
@@ -32,28 +33,23 @@ all: $(TARGETS)
 	@printf "%b\n" "$(AZUL)  - secuencial    (versión secuencial)$(RESET)"
 	@printf "%b\n" "$(AZUL)  - version1      (OpenMP)$(RESET)"
 	@printf "%b\n" "$(AZUL)  - version2      (MPI 1D por filas)$(RESET)"
-	@printf "%b\n" "$(AZUL)  - version3      (Benchmark completo: Seq + MPI + OMP)$(RESET)"
 
 $(OUTDIR):
 	@printf "%b\n" "$(AZUL)Creando directorio $(OUTDIR)...$(RESET)"
 	@mkdir -p $(OUTDIR)
 
 ### Reglas de compilación ###
-$(OUTDIR)/secuencial: src/secuencial.cpp | $(OUTDIR)
+$(OUTDIR)/secuencial: $(SRCDIR)/secuencial.cpp | $(OUTDIR)
 	@printf "%b\n" "$(AZUL)Compilando secuencial...$(RESET)"
-	@$(CXX) $(CXXFLAGS) -o $@ $<
+	@$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
 
-$(OUTDIR)/version1: src/version1.cpp | $(OUTDIR)
+$(OUTDIR)/version1: $(SRCDIR)/version1.cpp | $(OUTDIR)
 	@printf "%b\n" "$(AZUL)Compilando version1 (OpenMP)...$(RESET)"
 	@$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
 
-$(OUTDIR)/version2: src/version2.cpp | $(OUTDIR)
+$(OUTDIR)/version2: $(SRCDIR)/version2.cpp | $(OUTDIR)
 	@printf "%b\n" "$(AZUL)Compilando version2 (MPI 1D)...$(RESET)"
 	@$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o $@ $<
-
-$(OUTDIR)/version3: src/version3.cpp | $(OUTDIR)
-	@printf "%b\n" "$(AZUL)Compilando version3 (Benchmark)...$(RESET)"
-	@$(MPICXX) $(CXXFLAGS) $(OMPFLAGS) $(MPIFLAGS) -o $@ $<
 
 ### Reglas de ejecución ###
 run-secuencial: $(OUTDIR)/secuencial
@@ -61,8 +57,8 @@ run-secuencial: $(OUTDIR)/secuencial
 	@./$(OUTDIR)/secuencial
 
 run-v1: $(OUTDIR)/version1
-	@printf "%b\n" "$(AZUL)Ejecutando version1 (OpenMP) con OMP_NUM_THREADS=$(NP)...$(RESET)"
-	@OMP_NUM_THREADS=$(NP) ./$(OUTDIR)/version1
+	@printf "%b\n" "$(AZUL)Ejecutando version1 (OpenMP) con OMP_NUM_THREADS=$(OMP_THREADS)...$(RESET)"
+	@OMP_NUM_THREADS=$(OMP_THREADS) ./$(OUTDIR)/version1
 
 run-v1-threads: $(OUTDIR)/version1
 	@printf "%b\n" "$(AZUL)Ejecutando version1 (OpenMP) con OMP_NUM_THREADS=$(OMP_NUM_THREADS)...$(RESET)"
@@ -76,120 +72,77 @@ run-v2-quick: $(OUTDIR)/version2
 	@printf "%b\n" "$(AZUL)Ejecutando version2 (MPI) con 4 procesos (quick)...$(RESET)"
 	@mpirun -np 4 ./$(OUTDIR)/version2
 
-run-v3: $(OUTDIR)/version3
-	@printf "%b\n" "$(AZUL)Ejecutando benchmark (version3) con $(NP) procesos MPI...$(RESET)"
-	@mpirun -np $(NP) ./$(OUTDIR)/version3
-
 ### Utilidades de benchmark ###
-benchmark-csv: $(OUTDIR)/version3
-	@printf "%b\n" "$(VERDE)Generando CSV para 1,2,4,8,16 procesos...$(RESET)"
-	@rm -f plots/resultados_benchmark.csv
-	@rm -f plots/graficas_rendimiento.png
-	@for np in 1 2 4 8 16; do \
-		printf "%b%d%b\n" "$(AZUL)--- p=" $$np " ---$(RESET)"; \
-		OMP_NUM_THREADS=$$np mpirun -np $$np ./$(OUTDIR)/version3; \
-	done
-	@printf "%b\n" "$(VERDE)✓ CSV generado: resultados_benchmark.csv$(RESET)"
-
-benchmark-separado: $(OUTDIR)/secuencial $(OUTDIR)/version1 $(OUTDIR)/version2
-	@printf "%b\n" "$(VERDE)Ejecutando benchmark comparativo...$(RESET)"
-	@printf "%b\n" "$(AZUL)Ejecutando secuencial$(RESET)"
+benchmark-sec: $(OUTDIR)/secuencial
+	@printf "%b\n" "$(VERDE)Benchmark secuencial:$(RESET)"
+	@rm -f plots/sec_results.csv
+	@mkdir -p plots
 	@./$(OUTDIR)/secuencial
-	@for threads in 1 2 4; do \
-		printf "%b%d%b\n" "$(AZUL)--- threads=" $$threads " ---$(RESET)"; \
-		OMP_NUM_THREADS=$$threads ./$(OUTDIR)/version1; \
+	@printf "%b\n" "$(VERDE)✓ CSV generado: plots/sec_results.csv$(RESET)"
+
+benchmark-omp: $(OUTDIR)/version1
+	@printf "%b\n" "$(VERDE)Benchmark OMP:$(RESET)"
+	@rm -f plots/omp_results.csv
+	@mkdir -p plots
+	@for nt in 1 2 4 8 16; do \
+		printf "%b%d%b\n" "$(AZUL)--- Threads = " $$nt " ---$(RESET)"; \
+		OMP_NUM_THREADS=$$nt ./$(OUTDIR)/version1; \
 	done
-	@for np in 2 4 8 16; do \
-		printf "%b%d%b\n" "$(AZUL)--- p=" $$np " ---$(RESET)"; \
+	@printf "%b\n" "$(VERDE)✓ CSV generado: plots/omp_results.csv$(RESET)"
+
+benchmark-mpi: $(OUTDIR)/version2
+	@printf "%b\n" "$(VERDE)Benchmark MPI:$(RESET)"
+	@rm -f plots/mpi_results.csv
+	@mkdir -p plots
+	@for np in 1 2 4 8 16; do \
+		printf "%b%d%b\n" "$(AZUL)--- Processes = " $$np " ---$(RESET)"; \
 		mpirun -np $$np ./$(OUTDIR)/version2; \
 	done
-	@printf "%b\n" "$(VERDE)Benchmark finalizado$(RESET)"
+	@printf "%b\n" "$(VERDE)✓ CSV generado: plots/mpi_results.csv$(RESET)"
 
-benchmark: $(OUTDIR)/version1 $(OUTDIR)/version2
-	@printf "%b\n" "$(VERDE)Benchmark emparejado: ejecutar version3 si existe, sino OpenMP+MPI (p=2,4,8,16,32)$(RESET)"
-	@for p in 2 4 8 16 32 ; do \
-		printf "%b%d%b\n" "$(AZUL)--- p=" $$p " ---$(RESET)"; \
-		if [ -x ./$(OUTDIR)/version3 ]; then \
-			printf "%b%d%b\n" "$(AZUL)Ejecutando version3 con mpirun -np " $$p " y OMP_NUM_THREADS=" $$p "$(RESET)"; \
-			OMP_NUM_THREADS=$$p mpirun -np $$p ./$(OUTDIR)/version3; \
-		else \
-			printf "%b%d%b\n" "$(AZUL)Ejecutando OpenMP: OMP_NUM_THREADS=" $$p "$(RESET)"; \
-			OMP_NUM_THREADS=$$p ./$(OUTDIR)/version1; \
-			printf "%b%d%b\n" "$(AZUL)Ejecutando MPI: mpirun -np " $$p "$(RESET)"; \
-			mpirun -np $$p ./$(OUTDIR)/version2; \
-		fi; \
-	done
-	@printf "%b\n" "$(VERDE)Benchmark emparejado finalizado$(RESET)"
+benchmark: benchmark-sec benchmark-omp benchmark-mpi
+	@printf "%b\n" "$(VERDE)✓ Todos los benchmarks ejecutados$(RESET)"
+
+benchmark-show: benchmark
+	@printf "%b\n" "$(VERDE)Generando y mostrando grafica:$(RESET)"
+	@python3 plots/main.py
 
 ### Limpiar ###
 clean:
 	@printf "%b\n" "$(AZUL)Limpiando ejecutables...$(RESET)"
 	@rm -rf $(OUTDIR)
-	@rm -f plots/resultados_benchmark.csv
+	@rm -f plots/sec_results.csv
+	@rm -f plots/omp_results.csv
+	@rm -f plots/mpi_results.csv
 	@rm -f plots/graficas_rendimiento.png
 
 rebuild: clean all
 
-###############
-BENCHDIR = $(SRCDIR)/benchmark
-
-# ======================================================
-# Build rules
-# ======================================================
-$(OUTDIR)/seq_bench: $(BENCHDIR)/seq_bench.cpp $(BENCHDIR)/common.hpp | $(OUTDIR)
-	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
-
-$(OUTDIR)/omp_bench: $(BENCHDIR)/omp_bench.cpp $(BENCHDIR)/common.hpp | $(OUTDIR)
-	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o $@ $<
-
-$(OUTDIR)/mpi_bench: $(BENCHDIR)/mpi_bench.cpp $(BENCHDIR)/common.hpp | $(OUTDIR)
-	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o $@ $<
-
-# ======================================================
-# Benchmarks (build + run multiple configurations)
-# ======================================================
-.PHONY: benchmark_seq benchmark_omp benchmark_mpi clean
-
-benchmark_seq: $(OUTDIR)/seq_bench
-	@echo "Running SEQUENTIAL benchmark..."
-	@rm -f plots/seq_results.csv
-	@mkdir -p plots
-	./$(OUTDIR)/seq_bench $$t
-	@echo "✓ SEQUENTIAL CSV generated: plots/seq_bench.csv"
-
-benchmark_omp: $(OUTDIR)/omp_bench
-	@echo "Running OpenMP benchmark..."
-	@rm -f plots/omp_results.csv
-	@mkdir -p plots
-	@for t in 1 2 4 8 16 32; do \
-		echo "--- Threads = $$t ---"; \
-		OMP_NUM_THREADS=$$t ./$(OUTDIR)/omp_bench; \
-	done
-	@echo "✓ OpenMP CSV generated: plots/omp_bench.csv"
-
-benchmark_mpi: $(OUTDIR)/mpi_bench
-	@echo "Running MPI benchmark..."
-	@rm -f plots/mpi_results.csv
-	@mkdir -p plots
-	@for np in 1 2 4 8 16 32; do \
-		echo "--- Processes = $$np ---"; \
-		mpirun -np $$np ./$(OUTDIR)/mpi_bench; \
-	done
-	@echo "✓ MPI CSV generated: plots/mpi_bench.csv"
-
-benchmark_all: benchmark_seq benchmark_omp benchmark_mpi
-	@echo "✓ All benchmarks completed."
-
-compile_benchmarks: $(OUTDIR)/seq_bench $(OUTDIR)/omp_bench $(OUTDIR)/mpi_bench
-	@echo "✓ Compiled all benchmarks"
-
-###############
-
 help:
 	@printf "%b\n" "$(AZUL)Makefile para Ecuación de Calor 2D$(RESET)"
-	@printf "%b\n" "$(AZUL)  make                  - Compila todo en ./out/$(RESET)"
-	@printf "%b\n" "$(AZUL)  make run-v2 NP=6      - Ejecuta version2 con NP procesos MPI$(RESET)"
-	@printf "%b\n" "$(AZUL)  make run-v1-threads OMP_NUM_THREADS=4 - Ejecuta version1 con X threads$(RESET)"
-	@printf "%b\n" "$(AZUL)  make benchmark        - Ejecuta comparativo básico$(RESET)"
+	@printf "%b\n" "$(AZUL)Compilación y ejecución de las diferentes versiones y benchmarks$(RESET)"
+	@printf "%b\n" "$(AZUL)=========================================$(RESET)"
+	@printf "%b\n" "$(AZUL)  make                  - Compila todos los ejecutables en ./out/$(RESET)"
+	@printf "%b\n" "$(AZUL)  make clean            - Elimina ejecutables y CSVs/graficas generadas$(RESET)"
+	@printf "%b\n" "$(AZUL)  make rebuild          - Limpia y recompila todo$(RESET)"
+	@printf "%b\n" "$(AZUL)=========================================$(RESET)"
+	@printf "%b\n" "$(AZUL)Ejecución de versiones individuales$(RESET)"
+	@printf "%b\n" "$(AZUL)  make run-secuencial          - Ejecuta la versión secuencial$(RESET)"
+	@printf "%b\n" "$(AZUL)  make run-v1 NP=4             - Ejecuta version1 (OpenMP) con NP threads (usa OMP_NUM_THREADS)\$(RESET)"
+	@printf "%b\n" "$(AZUL)  make run-v1-threads          - Ejecuta version1 (OpenMP) con OMP_NUM_THREADS definido$(RESET)"
+	@printf "%b\n" "$(AZUL)  make run-v2 NP=4             - Ejecuta version2 (MPI) con NP procesos$(RESET)"
+	@printf "%b\n" "$(AZUL)  make run-v2-quick            - Ejecuta version2 (MPI) con 4 procesos (rápido para pruebas)$(RESET)"
+	@printf "%b\n" "$(AZUL)=========================================$(RESET)"
+	@printf "%b\n" "$(AZUL)Reglas de benchmark y generación de CSV$(RESET)"
+	@printf "%b\n" "$(AZUL)  make benchmark-sec           - Ejecuta benchmark secuencial y genera plots/sec_results.csv$(RESET)"
+	@printf "%b\n" "$(AZUL)  make benchmark-omp           - Ejecuta benchmark OpenMP (varios NP) y genera plots/omp_results.csv$(RESET)"
+	@printf "%b\n" "$(AZUL)  make benchmark-mpi           - Ejecuta benchmark MPI (varios NP) y genera plots/mpi_results.csv$(RESET)"
+	@printf "%b\n" "$(AZUL)  make benchmark               - Ejecuta benchmark-sec, benchmark-omp y benchmark-mpi$(RESET)"
+	@printf "%b\n" "$(AZUL)  make benchmark-show          - Ejecuta todos los benchmarks y luego genera y muestra las gráficas con Python$(RESET)"
+	@printf "%b\n" "$(AZUL)=========================================$(RESET)"
+	@printf "%b\n" "$(AZUL)Opciones y variables comunes$(RESET)"
+	@printf "%b\n" "$(AZUL)  NP=4                         - Número de procesos MPI para ejecución MPI$(RESET)"
+	@printf "%b\n" "$(AZUL)  OMP_NUM_THREADS=4            - Número de threads OpenMP para version1$(RESET)"
 
-.PHONY: all clean rebuild run-secuencial run-v1 run-v1-threads run-v2 run-v2-quick run-v3 benchmark benchmark-csv help
+.PHONY: all clean rebuild run-secuencial run-v1 run-v1-threads run-v2 run-v2-quick\
+        benchmark benchmark-show help

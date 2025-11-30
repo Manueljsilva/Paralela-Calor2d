@@ -1,106 +1,114 @@
-#include <iostream>
-#include <ctime>
+#include "common.hpp"
 #include <omp.h>
+#include <iostream>
+#include <cmath>
+#include <algorithm>
 
-#define min(A, B) ((A) < (B) ? (A) : (B))
-#define max(A, B) ((A) > (B) ? (A) : (B))
+MetricasOMP ejecutar_omp() {
+    const int NI = imax + 1;
+    const int NK = kmax + 1;
 
-const int imax = 80;
-const int kmax = 80;
-const int itmax = 20000;
+    // Allocate arrays on heap to avoid stack overflow
+    double *phi  = new double[(size_t)NI * NK];
+    double *phin = new double[(size_t)NI * NK];
+    auto idx = [&](int i, int k) -> size_t { return (size_t)i * NK + k; };
 
-int main() {
-    double eps = 1.0e-08;
-    double phi[imax + 1][kmax + 1], phin[imax][kmax];
-    double dx, dy, dx2, dy2, dx2i, dy2i, dt, dphi, dphimax;
-    int i, k, it;
+    // Grid spacing
+    double dx = 1.0 / kmax;
+    double dy = 1.0 / imax;
+    double dx2 = dx * dx;
+    double dy2 = dy * dy;
+    double dx2i = 1.0 / dx2;
+    double dy2i = 1.0 / dy2;
+    double dt = std::min(dx2, dy2) / 4.0;
 
-    double t_inicio, t_fin;
+    double eps = 1e-8;
 
-    dx = 1.0 / kmax;
-    dy = 1.0 / imax;
-    dx2 = dx * dx;
-    dy2 = dy * dy;
-    dx2i = 1.0 / dx2;
-    dy2i = 1.0 / dy2;
-    dt = min(dx2, dy2) / 4.0;
-    
-    /* valores iniciales */
-    for (k = 0; k < kmax; k++)
-    {
-        for (i = 1; i < imax; i++)
-        {
-            phi[i][k] = 0.0;
-        }
+    // ---- Initialization ----
+    for (int i = 0; i < NI; ++i)
+        for (int k = 0; k < NK; ++k)
+            phi[idx(i,k)] = 0.0;
+
+    for (int i = 0; i <= imax; ++i)
+        phi[idx(i,kmax)] = 1.0;
+
+    phi[idx(0,0)] = 0.0;
+    phi[idx(imax,0)] = 0.0;
+
+    for (int k = 1; k < kmax; ++k) {
+        phi[idx(0,k)] = phi[idx(0,k-1)] + dx;
+        phi[idx(imax,k)] = phi[idx(imax,k-1)] + dx;
     }
 
-    for (i = 0; i <= imax; i++)
-    {
-        phi[i][kmax] = 1.0;
-    }
+    // ---- Print header info like original ----
+    std::cout << "  Transmision de calor 2D - Version 1\n";
+    std::cout << "  Paralelizacion: OpenMP\n";
+    std::cout << "\ndx = " << dx << ", dy = " << dy
+              << ", dt = " << dt << ", eps = " << eps << "\n";
 
-    phi[0][0] = 0.0;
-    phi[imax][0] = 0.0;
-
-    for (k = 1; k < kmax; k++)
-    {
-        phi[0][k] = phi[0][k - 1] + dx;
-        phi[imax][k] = phi[imax][k - 1] + dx;
-    }
-
-    printf("  Transmision de calor 2D - Version 1\n");
-    printf("  Paralelizacion: OpenMP\n");
-    printf("\ndx = %12.4g, dy = %12.4g, dt = %12.4g, eps = %12.4g\n",
-           dx, dy, dt, eps);
-    
     int num_threads;
     #pragma omp parallel
     {
         #pragma omp single
         num_threads = omp_get_num_threads();
     }
-    printf("Numero de threads: %d\n", num_threads);
+    std::cout << "Numero de threads: " << num_threads << "\n";
 
-    t_inicio = omp_get_wtime();
+    // ---- Iteration ----
+    int it;
+    double t_inicio = omp_get_wtime();
+    for (it = 1; it <= itmax; ++it) {
+        double dphimax = 0.0;
 
-    /* iteracion */
-    for (it = 1; it <= itmax; it++)
-    {
-        dphimax = 0.;
-        
-        // Paralelizacion del bucle de calculo
-        #pragma omp parallel for private(i, dphi) reduction(max:dphimax) schedule(static)
-        for (k = 1; k < kmax; k++)
-        {
-            
-            for (i = 1; i < imax; i++) 
-            {
-                dphi = (phi[i + 1][k] + phi[i - 1][k] - 2. * phi[i][k]) * dy2i + 
-                       (phi[i][k + 1] + phi[i][k - 1] - 2. * phi[i][k]) * dx2i;
-                dphi = dphi * dt;
-                dphimax = max(dphimax, dphi);
-                phin[i][k] = phi[i][k] + dphi;
+        #pragma omp parallel for reduction(max:dphimax) schedule(static)
+        for (int k = 1; k < kmax; ++k) {
+            for (int i = 1; i < imax; ++i) {
+                double dphi = (phi[idx(i+1,k)] + phi[idx(i-1,k)] - 2.0 * phi[idx(i,k)]) * dy2i
+                            + (phi[idx(i,k+1)] + phi[idx(i,k-1)] - 2.0 * phi[idx(i,k)]) * dx2i;
+                dphi *= dt;
+                if (dphi > dphimax) dphimax = dphi;
+                phin[idx(i,k)] = phi[idx(i,k)] + dphi;
             }
         }
 
-        // Paralelizacion del bucle de actualizacion
-        #pragma omp parallel for private(i) schedule(static)
-        for (k = 1; k < kmax; k++)
-        {
-            for (i = 1; i < imax; i++)
-            {
-                phi[i][k] = phin[i][k];
-            }
-        }
-        
+        // Copy phin -> phi
+        #pragma omp parallel for schedule(static)
+        for (int k = 1; k < kmax; ++k)
+            for (int i = 1; i < imax; ++i)
+                phi[idx(i,k)] = phin[idx(i,k)];
+
         if (dphimax < eps)
             break;
     }
+    double t_fin = omp_get_wtime();
 
-    t_fin = omp_get_wtime();
-    
-    printf("\n%d iteraciones completadas\n", it);
-    printf("\nTiempo de ejecucion = %12.6f sec\n", t_fin - t_inicio);
-    
+    // ---- Print results like original ----
+    std::cout << "\n" << it << " iteraciones completadas\n";
+    std::cout << "Tiempo de ejecucion = " << t_fin - t_inicio << " sec\n";
+
+    // ---- Metrics struct for CSV ----
+    MetricasOMP metricas;
+    metricas.tiempo_total = t_fin - t_inicio;
+    metricas.iteraciones = it;
+    long long flops = calcular_flops(imax, kmax, it);
+    metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
+
+    delete [] phi;
+    delete [] phin;
+
+    return metricas;
+}
+
+int main() {
+    int threads = omp_get_max_threads();
+    std::cout << "OMP benchmark starting with " << threads << " threads...\n";
+
+    MetricasOMP m = ejecutar_omp();
+    std::cout << "OMP done: time=" << m.tiempo_total
+              << "s, it=" << m.iteraciones
+              << ", gflops=" << m.gflops << "\n";
+
+    export_omp_csv("plots/omp_results.csv", threads, m);
+    std::cout << "Wrote plots/omp_results.csv\n";
     return 0;
 }
