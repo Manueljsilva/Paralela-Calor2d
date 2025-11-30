@@ -196,7 +196,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
                          - 2.0 * phi_local[i_local][k]) * dx2i;
 
                     dphi *= dt;
-                    dphimax_local = std::max(dphimax_local, dphi);
+                    dphimax_local = std::max(dphimax_local, std::fabs(dphi));
                     phin_local[i_local][k] = phi_local[i_local][k] + dphi;
                 }
             }
@@ -225,7 +225,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
                      - 2.0 * phi_local[i_local][k]) * dx2i;
 
                 dphi *= dt;
-                dphimax_local = std::max(dphimax_local, dphi);
+                dphimax_local = std::max(dphimax_local, std::fabs(dphi));
                 phin_local[i_local][k] = phi_local[i_local][k] + dphi;
             }
         }
@@ -241,7 +241,7 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
                      - 2.0 * phi_local[i_local][k]) * dx2i;
 
                 dphi *= dt;
-                dphimax_local = std::max(dphimax_local, dphi);
+                dphimax_local = std::max(dphimax_local, std::fabs(dphi));
                 phin_local[i_local][k] = phi_local[i_local][k] + dphi;
             }
         }

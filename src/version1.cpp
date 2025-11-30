@@ -66,7 +66,7 @@ MetricasOMP ejecutar_omp() {
                 double dphi = (phi[idx(i+1,k)] + phi[idx(i-1,k)] - 2.0 * phi[idx(i,k)]) * dy2i
                             + (phi[idx(i,k+1)] + phi[idx(i,k-1)] - 2.0 * phi[idx(i,k)]) * dx2i;
                 dphi *= dt;
-                if (dphi > dphimax) dphimax = dphi;
+                dphimax = std::max(dphimax, std::fabs(dphi));
                 phin[idx(i,k)] = phi[idx(i,k)] + dphi;
             }
         }

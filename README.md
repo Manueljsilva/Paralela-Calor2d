@@ -207,9 +207,9 @@ Verificar que `dphimax < eps` al final de la ejecución.
 
 ##  Autor
 
-- Manuel Jesus Silva Anampa
 - Alejandro Joel Ore Garcia
-- ...
+- Manuel Jesus Silva Anampa
+- Frans Josep Trujillo Flores
 
 ##  Licencia
 
