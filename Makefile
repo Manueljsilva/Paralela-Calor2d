@@ -60,8 +60,8 @@ run-secuencial: $(OUTDIR)/secuencial
 	@./$(OUTDIR)/secuencial
 
 run-v1: $(OUTDIR)/version1
-	@echo "$(AZUL)Ejecutando version1 (OpenMP) con 4 threads...$(RESET)"
-	@OMP_NUM_THREADS=4 ./$(OUTDIR)/version1
+	@echo "$(AZUL)Ejecutando version1 (OpenMP) con OMP_NUM_THREADS=$(NP)...$(RESET)"
+	@OMP_NUM_THREADS=$(NP) ./$(OUTDIR)/version1
 
 run-v1-threads: $(OUTDIR)/version1
 	@echo "$(AZUL)Ejecutando version1 (OpenMP) con OMP_NUM_THREADS=$(OMP_NUM_THREADS)...$(RESET)"
@@ -89,9 +89,10 @@ benchmark-csv: $(OUTDIR)/version3
 	@mpirun -np 2 ./$(OUTDIR)/version3
 	@mpirun -np 4 ./$(OUTDIR)/version3
 	@mpirun -np 8 ./$(OUTDIR)/version3
+	@mpirun -np 16 ./$(OUTDIR)/version3
 	@echo "$(VERDE)✓ CSV generado: resultados_benchmark.csv$(RESET)"
 
-benchmark: $(OUTDIR)/secuencial $(OUTDIR)/version1 $(OUTDIR)/version2
+benchmark-separado: $(OUTDIR)/secuencial $(OUTDIR)/version1 $(OUTDIR)/version2
 	@echo "$(VERDE)Ejecutando benchmark comparativo...$(RESET)"
 	@./$(OUTDIR)/secuencial
 	@OMP_NUM_THREADS=1 ./$(OUTDIR)/version1
@@ -100,7 +101,25 @@ benchmark: $(OUTDIR)/secuencial $(OUTDIR)/version1 $(OUTDIR)/version2
 	@mpirun -np 2 ./$(OUTDIR)/version2
 	@mpirun -np 4 ./$(OUTDIR)/version2
 	@mpirun -np 8 ./$(OUTDIR)/version2
+	@mpirun -np 16 ./$(OUTDIR)/version2
 	@echo "$(VERDE)Benchmark finalizado$(RESET)"
+
+.PHONY: benchmark-equal
+benchmark: $(OUTDIR)/version1 $(OUTDIR)/version2
+	@echo "$(VERDE)Benchmark emparejado: ejecutar version3 si existe, sino OpenMP+MPI (p=2,4,8)$(RESET)"
+	@for p in 2 4 8 16 32 ; do \
+		echo "--- p=$$p ---"; \
+		if [ -x ./$(OUTDIR)/version3 ]; then \
+			echo "--- Ejecutando version3 con mpirun -np $$p y OMP_NUM_THREADS=$$p"; \
+			OMP_NUM_THREADS=$$p mpirun -np $$p ./$(OUTDIR)/version3; \
+		else \
+			echo "--- Ejecutando OpenMP: OMP_NUM_THREADS=$$p"; \
+			OMP_NUM_THREADS=$$p ./$(OUTDIR)/version1; \
+			echo "--- Ejecutando MPI: mpirun -np $$p"; \
+			mpirun -np $$p ./$(OUTDIR)/version2; \
+		fi; \
+	done
+	@echo "$(VERDE)Benchmark emparejado finalizado$(RESET)"
 
 ### Limpiar ###
 clean:
