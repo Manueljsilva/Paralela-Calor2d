@@ -13,5 +13,5 @@
 mkdir -p plots logs
 echo "Running SEQUENTIAL benchmark..."
 rm -f plots/sec_results.csv
-./out/sec_bench
+./out/secuencial
 echo "✓ SEQUENTIAL CSV generated: plots/sec_bench.csv"

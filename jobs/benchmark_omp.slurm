@@ -22,7 +22,7 @@ export OMP_PROC_BIND=spread
 for t in 1 2 4 8 16 32 64; do
     echo "--- Threads = $t ---"
     export OMP_NUM_THREADS=$t
-    ./out/omp_bench
+    ./out/version1
 done
 
 echo "✓ OpenMP CSV generated: plots/omp_bench.csv"

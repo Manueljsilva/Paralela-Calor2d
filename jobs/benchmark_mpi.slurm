@@ -25,7 +25,7 @@ for np in 1 2 4 8 16 32 64; do
     fi
 
     echo "Running with $np tasks, $TASKS_PER_NODE tasks per node"
-    mpirun -np $np --map-by ppr:$TASKS_PER_NODE:node ./out/mpi_bench
+    mpirun -np $np --map-by ppr:$TASKS_PER_NODE:node ./out/version2
 done
 
 echo "✓ MPI CSV generated: plots/mpi_bench.csv"
