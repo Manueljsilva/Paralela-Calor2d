@@ -2,7 +2,7 @@
 #SBATCH --job-name=sec_bench
 #SBATCH --output=logs/sec_bench_%j.out
 #SBATCH --error=logs/sec_bench_%j.err
-#SBATCH --time=02:30:00
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1

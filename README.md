@@ -25,13 +25,12 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
 
 ### 2. **V1: OpenMP** (`version1.cpp`)
 - **Paradigma:** Memoria compartida (multi-threading)
-- **Paralelización:** Ambos bucles espaciales con `collapse(2)` (similar a descomposición 2D)
 - **Directivas clave:**
   ```cpp
-  #pragma omp parallel for collapse(2) private(dphi) reduction(max:dphimax) schedule(static)
+  #pragma omp parallel for reduction(max:dphimax) schedule(static)
   ```
 - **Ventajas:**
-  -  Paralelización 2D: divide dominio en grid 2D de iteraciones (79×79 = 6,241 iteraciones)
+  -  Paralelización 2D: divide dominio en grid 2D de iteraciones
   -  Mejor balanceo de carga con muchos threads
   -  Comparación justa con descomposición 2D de MPI
   -  Sin comunicación explícita
@@ -53,43 +52,58 @@ $$\frac{\partial \phi}{\partial t} = \alpha \left(\frac{\partial^2 \phi}{\partia
   -  Solapamiento comunicación/cómputo
 - **Overhead:** Comunicación aumenta con más procesos (~8-15% en grids pequeños)
 
-### 4. **V3: Benchmark Completo** (`version3.cpp`)
-- **Propósito:** Herramienta de análisis comparativo
-- **Ejecuta:** Secuencial → MPI → OpenMP (en orden)
-- **Métricas generadas:**
-  - Speedup: $S_p = T_{seq} / T_{par}$
-  - Eficiencia: $E_p = (S_p / p) \times 100\%$
-  - GFlops (rendimiento computacional)
-  - Overhead de comunicación (%)
-- **Salida:** CSV para análisis (`resultados_benchmark.csv`)
-- **Gráficas:** Script Python incluido (`graficar.py`)
-
 ## Compilación y Ejecución
 
 ### **Opción 1: Usando Makefile (Recomendado)**
 
+### Compilar todo
 ```bash
-# Compilar todas las versiones
 make all
+```
 
-# Compilar versiones individuales
-make secuencial
-make version1      # OpenMP
-make version2      # MPI
-make version3      # Benchmark completo
+Genera los ejecutables en `./out/`:
+- `out/secuencial` — versión secuencial
+- `out/version1` — OpenMP
+- `out/version2` — MPI 1D
 
-# Ejecutar con configuraciones predefinidas
-make run-v1-4      # OpenMP con 4 threads
-make run-v2-4      # MPI con 4 procesos
-make run-v3-4      # Benchmark con 4 procesos MPI
+### Ejecutar (ejemplos)
+```bash
+# Ejecutar secuencial
+make run-secuencial
 
-# Generar datos para gráficas (1, 2, 4 procesos)
-make benchmark-csv
+# Ejecutar OpenMP (ajustar número de hilos)
+make run-v1 OMP_THREADS=4
+# o alternativamente
+OMP_NUM_THREADS=4 make run-v1
 
-# Limpiar ejecutables y datos
+# Ejecutar MPI (ajustar número de procesos)
+make run-v2 NP=4
+# ejemplo rápido
+make run-v2-quick
+```
+
+### Benchmarks (genera CSVs en ./plots/)
+```bash
+# Secuencial
+make benchmark-sec
+
+# OpenMP
+make benchmark-omp
+
+# MPI
+make benchmark-mpi
+
+# Todos
+make benchmark
+```
+
+### Limpieza
+```bash
 make clean
+```
 
-# Ver todas las opciones disponibles
+### Ayuda
+```bash
 make help
 ```
 
@@ -118,26 +132,16 @@ mpic++ -Wall -o version2 version2.cpp
 mpirun -np 4 ./version2
 ```
 
-#### **V3: Benchmark (MPI + OpenMP)**
-```bash
-# Compilador MPI con flag OpenMP
-mpic++ -Wall -fopenmp -o version3 version3.cpp
-
-# Ejecutar con 4 procesos MPI
-# (OpenMP usará threads disponibles automáticamente)
-mpirun -np 4 ./version3
-```
-
 ## Análisis de Resultados
 
 ### **Generar Gráficas**
 
 ```bash
 # 1. Ejecutar benchmarks
-make benchmark-csv
+make benchmark
 
 # 2. Generar gráficas con Python
-python3 graficar.py
+python3 plots/main.py
 ```
 
 
@@ -166,27 +170,26 @@ module load gcc/11.2.0 openmpi/4.1.1
 mpic++ -Wall -fopenmp -o version3 version3.cpp
 
 # Ejecutar benchmark con 32 procesos (4 nodos × 8 procesos)
-mpirun -np 32 ./version3
+mpirun -np 32 out/version3
 ```
 
-### **2. Enviar Trabajo**
+### **2. Enviar Trabajos**
 
 ```bash
-sbatch job_calor2d.sh
+sbatch jobs/job.slurm
 ```
 
 ### **3. Escalar Grid para Khipu**
 
-Modificar en los archivos `.cpp`:
+Modificar en `common.hpp`:
 ```cpp
-const int imax = 320;  // Grid más grande
-const int kmax = 320;
+#ifdef CLUSTER_BENCHMARK
+    constexpr int imax = 3840;
+    constexpr int kmax = 3840;
+    constexpr int itmax = 20000;
+    constexpr double eps = 1e-8;
+// ...
 ```
-
-Recomendaciones:
-- **80×80:** Pruebas locales (1-4 procesos)
-- **320×320:** Khipu con 16-32 procesos
-- **640×640:** Khipu con 64-128 procesos
 
 ## Validación de Resultados
 

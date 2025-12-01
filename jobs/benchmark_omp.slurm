@@ -2,7 +2,7 @@
 #SBATCH --job-name=omp_bench
 #SBATCH --output=logs/omp_bench_%j.out
 #SBATCH --error=logs/omp_bench_%j.err
-#SBATCH --time=02:30:00
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64        # restricted to 64 cores
@@ -20,7 +20,7 @@ rm -f plots/omp_results.csv
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 
-for t in 64 32 16 8 4 2; do
+for t in 1 2 4 8 16 32 64; do
     echo "--- Threads = $t ---"
     export OMP_NUM_THREADS=$t
     ./out/version1

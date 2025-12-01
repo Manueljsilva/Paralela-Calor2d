@@ -2,7 +2,7 @@
 #SBATCH --job-name=mpi_bench
 #SBATCH --output=logs/mpi_bench_%j.out
 #SBATCH --error=logs/mpi_bench_%j.err
-#SBATCH --time=02:30:00
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
 #SBATCH --cpus-per-task=1
@@ -16,7 +16,7 @@ rm -f plots/mpi_results.csv
 
 CORES_PER_NODE=64
 
-for np in 64 32 16 8 4 2; do
+for np in 1 2 4 8 16 32 64; do
     echo "--- Processes = $np ---"
 
     if [ $np -le $CORES_PER_NODE ]; then

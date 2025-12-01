@@ -141,8 +141,6 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
     double t_waitall = 0.0;
     double t_allreduce = 0.0;
 
-    bool convergencia = false;
-
     // ============================================
     // BUCLE TEMPORAL PRINCIPAL
     // ============================================
@@ -273,7 +271,6 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         t_allreduce += (MPI_Wtime() - t_aux);
 
         if (dphimax_global < eps) {
-            convergencia = true;
             break;
         }
     } // for it
@@ -302,7 +299,6 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
     metricas.tiempo_comunicacion = t_comunicacion_total;
     metricas.tiempo_computo      = metricas.tiempo_total - t_comunicacion_total;
     metricas.iteraciones         = it;
-    metricas.convergencia        = convergencia;
 
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
@@ -325,20 +321,16 @@ int main(int argc, char** argv) {
 
     // Recolectar máximos a rank 0 (idéntico a version3)
     MetricasMPI global;
-    int local_convergencia = static_cast<int>(local.convergencia);
-    int global_convergencia = 0;
 
     MPI_Reduce(&local.tiempo_total, &global.tiempo_total, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&local.tiempo_computo, &global.tiempo_computo, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&local.tiempo_comunicacion, &global.tiempo_comunicacion, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&local_convergencia, &global_convergencia, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
         global.iteraciones = local.iteraciones;
         long long flops = calcular_flops(imax, kmax, global.iteraciones);
         global.gflops = (double)flops / (global.tiempo_total * 1e9);
         global.porcentaje_comunicacion = (global.tiempo_comunicacion / global.tiempo_total) * 100.0;
-        global.convergencia = static_cast<bool>(global_convergencia);
 
         // Export CSV using the same helper as the other bench pieces
         export_mpi_csv("plots/mpi_results.csv", size, global);

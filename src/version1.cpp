@@ -22,8 +22,6 @@ MetricasOMP ejecutar_omp() {
     double dy2i = 1.0 / dy2;
     double dt = std::min(dx2, dy2) / 4.0;
 
-    bool convergencia = false;
-
     // ---- Initialization ----
     for (int i = 0; i < NI; ++i)
         for (int k = 0; k < NK; ++k)
@@ -78,7 +76,6 @@ MetricasOMP ejecutar_omp() {
                 phi[idx(i,k)] = phin[idx(i,k)];
 
         if (dphimax < eps) {
-            convergencia = true;
             break;
         }
     }
@@ -92,7 +89,6 @@ MetricasOMP ejecutar_omp() {
     MetricasOMP metricas;
     metricas.tiempo_total = t_fin - t_inicio;
     metricas.iteraciones = it;
-    metricas.convergencia = convergencia;
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
 

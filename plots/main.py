@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from merge import merge_benchmarks
 
+# Dimensiones
+n = 3840
+m = 3840
+
 # Leer datos del CSV
 sec_file = 'plots/sec_results.csv'
 omp_file = 'plots/omp_results.csv'
@@ -20,7 +24,7 @@ colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
 
 # Crear figura con 3 subplots
 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-fig.suptitle('Análisis de Rendimiento - Ecuación de Calor 2D (80×80)',
+fig.suptitle(f'Análisis de Rendimiento - Ecuación de Calor 2D ({n}×{m})',
              fontsize=16, fontweight='bold')
 
 # ============================================
