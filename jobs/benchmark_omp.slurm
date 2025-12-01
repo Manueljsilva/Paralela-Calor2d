@@ -20,7 +20,7 @@ rm -f plots/omp_results.csv
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 
-for t in 1 2 4 8 16 32 64; do
+for t in 64 32 16 8 4 2; do
     echo "--- Threads = $t ---"
     export OMP_NUM_THREADS=$t
     ./out/version1

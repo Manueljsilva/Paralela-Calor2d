@@ -16,7 +16,7 @@ rm -f plots/mpi_results.csv
 
 CORES_PER_NODE=64
 
-for np in 1 2 4 8 16 32 64; do
+for np in 64 32 16 8 4 2; do
     echo "--- Processes = $np ---"
 
     if [ $np -le $CORES_PER_NODE ]; then
