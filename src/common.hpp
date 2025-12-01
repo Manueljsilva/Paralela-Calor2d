@@ -8,7 +8,7 @@
 #include <iostream>
 
 // Constantes del problema
-//#define CLUSTER_BENCHMARK
+#define CLUSTER_BENCHMARK
 
 #ifdef CLUSTER_BENCHMARK
     constexpr int imax = 3840;

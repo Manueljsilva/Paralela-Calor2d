@@ -154,29 +154,35 @@ MetricasMPI ejecutar_mpi(int rank, int size) {
         int req_count = 0;
 
         double t_aux = MPI_Wtime();
-        // Enviar primera fila interior (i_local = 1) al vecino superior
-        if (rank > 0 && filas_locales > 0) {
-            MPI_Isend(phi_local[1], 1, MPI_ROW_TYPE,
-                      rank - 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
+
+        // If this rank has at least one interior row, we may send/recv halos.
+        if (filas_locales >= 1) {
+
+            // Enviar primera fila interior (i_local = 1) al vecino superior
+            if (rank > 0) {
+                MPI_Isend(phi_local[1], 1, MPI_ROW_TYPE,
+                          rank - 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
+            }
+
+            // Enviar última fila interior (i_local = filas_locales) al vecino inferior
+            if (rank < size - 1) {
+                MPI_Isend(phi_local[filas_locales], 1, MPI_ROW_TYPE,
+                          rank + 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
+            }
+
+            // Recibir halo superior desde vecino superior
+            if (rank > 0) {
+                MPI_Irecv(phi_local[0], 1, MPI_ROW_TYPE,
+                          rank - 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
+            }
+
+            // Recibir halo inferior desde vecino inferior
+            if (rank < size - 1) {
+                MPI_Irecv(phi_local[filas_locales + 1], 1, MPI_ROW_TYPE,
+                          rank + 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
+            }
         }
 
-        // Enviar última fila interior (i_local = filas_locales) al vecino inferior
-        if (rank < size - 1 && filas_locales > 0) {
-            MPI_Isend(phi_local[filas_locales], 1, MPI_ROW_TYPE,
-                      rank + 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
-        }
-
-        // Recibir halo superior desde vecino superior
-        if (rank > 0 && filas_locales > 0) {
-            MPI_Irecv(phi_local[0], 1, MPI_ROW_TYPE,
-                      rank - 1, TAG_UP, MPI_COMM_WORLD, &requests[req_count++]);
-        }
-
-        // Recibir halo inferior desde vecino inferior
-        if (rank < size - 1 && filas_locales > 0) {
-            MPI_Irecv(phi_local[filas_locales + 1], 1, MPI_ROW_TYPE,
-                      rank + 1, TAG_DOWN, MPI_COMM_WORLD, &requests[req_count++]);
-        }
         t_isend_irecv += (MPI_Wtime() - t_aux);
 
         // ============================================

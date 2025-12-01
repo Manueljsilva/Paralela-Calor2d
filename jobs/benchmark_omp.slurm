@@ -2,7 +2,8 @@
 #SBATCH --job-name=omp_bench
 #SBATCH --output=logs/omp_bench_%j.out
 #SBATCH --error=logs/omp_bench_%j.err
-#SBATCH --time=01:00:00
+#SBATCH --time=02:30:00
+#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64        # restricted to 64 cores
 #SBATCH --partition=all

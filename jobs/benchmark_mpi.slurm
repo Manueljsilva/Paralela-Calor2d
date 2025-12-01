@@ -2,9 +2,10 @@
 #SBATCH --job-name=mpi_bench
 #SBATCH --output=logs/mpi_bench_%j.out
 #SBATCH --error=logs/mpi_bench_%j.err
-#SBATCH --time=01:00:00
-#SBATCH --nodes=1-4
-#SBATCH --ntasks-per-node=16
+#SBATCH --time=02:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
 #SBATCH --partition=all
 
 #SBATCH --mail-user=alejandro.ore@utec.edu.pe
@@ -13,7 +14,7 @@
 mkdir -p plots logs
 rm -f plots/mpi_results.csv
 
-CORES_PER_NODE=16
+CORES_PER_NODE=64
 
 for np in 1 2 4 8 16 32 64; do
     echo "--- Processes = $np ---"
