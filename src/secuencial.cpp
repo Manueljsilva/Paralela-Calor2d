@@ -1,5 +1,6 @@
 #include "common.hpp"
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <ctime>
 #include <omp.h>
@@ -24,8 +25,7 @@ MetricasSecuencial ejecutar_secuencial() {
     double dy2i = 1.0 / dy2;
     double dt = std::min(dx2, dy2) / 4.0;
 
-    // Convergence tolerance
-    double eps = 1e-8;
+    bool convergencia = false;
 
     // ---- Initialization ----
     // Set interior points to zero
@@ -75,6 +75,7 @@ MetricasSecuencial ejecutar_secuencial() {
                 phi[idx(i,k)] = phin[idx(i,k)];
 
         if (dphimax < eps) {
+            convergencia = true;
             break;
         }
     }
@@ -87,6 +88,7 @@ MetricasSecuencial ejecutar_secuencial() {
     MetricasSecuencial m;
     m.tiempo_total = t_end - t_start;
     m.iteraciones = it;
+    m.convergencia = convergencia;
     long long flops = calcular_flops(imax, kmax, it);
     m.gflops = (double)flops / (m.tiempo_total * 1e9);
 

@@ -11,9 +11,9 @@
 #define CLUSTER_BENCHMARK
 
 #ifdef CLUSTER_BENCHMARK
-    constexpr int imax = 3840;
-    constexpr int kmax = 3840;
-    constexpr int itmax = 20000;
+    constexpr int imax = 500;
+    constexpr int kmax = 500;
+    constexpr int itmax = 1000000;
     constexpr double eps = 1e-10;
 #else
     constexpr int imax = 80;
@@ -30,18 +30,21 @@ struct MetricasMPI {
     int iteraciones = 0;
     double gflops = 0.0;
     double porcentaje_comunicacion = 0.0;
+    bool convergencia = false;
 };
 
 struct MetricasOMP {
     double tiempo_total = 0.0;
     int iteraciones = 0;
     double gflops = 0.0;
+    bool convergencia = false;
 };
 
 struct MetricasSecuencial {
     double tiempo_total = 0.0;
     int iteraciones = 0;
     double gflops = 0.0;
+    bool convergencia = false;
 };
 
 // FLOP model
@@ -72,10 +75,10 @@ inline void export_sec_csv(const std::string &filepath, const MetricasSecuencial
     if (!f.is_open()) { std::cerr << "ERROR: can't open " << filepath << "\n"; return; }
     f.seekp(0, std::ios::end);
     if (f.tellp() == 0) {
-        f << "Tiempo,Iteraciones,GFlops\n";
+        f << "Tiempo,Iteraciones,GFlops,Convergencia\n";
     }
     f << std::fixed << std::setprecision(6)
-      << seq.tiempo_total << "," << seq.iteraciones << "," << seq.gflops << "\n";
+      << seq.tiempo_total << "," << seq.iteraciones << "," << seq.gflops << "," << seq.convergencia << "\n";
     f.close();
 }
 
@@ -86,7 +89,7 @@ inline void export_mpi_csv(const std::string &filepath, int num_ranks, const Met
     if (!f.is_open()) { std::cerr << "ERROR: can't open " << filepath << "\n"; return; }
     f.seekp(0, std::ios::end);
     if (f.tellp() == 0) {
-        f << "Ranks,TiempoTotal,TiempoComputo,TiempoComunicacion,Iteraciones,GFlops,Comunicacion_%\n";
+        f << "Ranks,TiempoTotal,TiempoComputo,TiempoComunicacion,Iteraciones,GFlops,Comunicacion_%,Convergencia\n";
     }
     f << std::fixed << std::setprecision(6)
       << num_ranks << ","
@@ -95,7 +98,8 @@ inline void export_mpi_csv(const std::string &filepath, int num_ranks, const Met
       << mpi.tiempo_comunicacion << ","
       << mpi.iteraciones << ","
       << mpi.gflops << ","
-      << mpi.porcentaje_comunicacion << "\n";
+      << mpi.porcentaje_comunicacion << ","
+      << mpi.convergencia << "\n";
     f.close();
 }
 
@@ -106,13 +110,14 @@ inline void export_omp_csv(const std::string &filepath, int threads, const Metri
     if (!f.is_open()) { std::cerr << "ERROR: can't open " << filepath << "\n"; return; }
     f.seekp(0, std::ios::end);
     if (f.tellp() == 0) {
-        f << "Threads,TiempoTotal,Iteraciones,GFlops\n";
+        f << "Threads,TiempoTotal,Iteraciones,GFlops,Convergencia\n";
     }
     f << std::fixed << std::setprecision(6)
       << threads << ","
       << omp.tiempo_total << ","
       << omp.iteraciones << ","
-      << omp.gflops << "\n";
+      << omp.gflops << ","
+      << omp.convergencia << "\n";
     f.close();
 }
 

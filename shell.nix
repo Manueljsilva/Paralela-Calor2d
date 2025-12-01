@@ -7,6 +7,7 @@ let
     numpy
     pandas
     matplotlib
+    scikit-learn
   ]);
 in
 

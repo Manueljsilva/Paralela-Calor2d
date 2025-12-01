@@ -22,7 +22,7 @@ MetricasOMP ejecutar_omp() {
     double dy2i = 1.0 / dy2;
     double dt = std::min(dx2, dy2) / 4.0;
 
-    double eps = 1e-8;
+    bool convergencia = false;
 
     // ---- Initialization ----
     for (int i = 0; i < NI; ++i)
@@ -77,8 +77,10 @@ MetricasOMP ejecutar_omp() {
             for (int i = 1; i < imax; ++i)
                 phi[idx(i,k)] = phin[idx(i,k)];
 
-        if (dphimax < eps)
+        if (dphimax < eps) {
+            convergencia = true;
             break;
+        }
     }
     double t_fin = omp_get_wtime();
 
@@ -90,6 +92,7 @@ MetricasOMP ejecutar_omp() {
     MetricasOMP metricas;
     metricas.tiempo_total = t_fin - t_inicio;
     metricas.iteraciones = it;
+    metricas.convergencia = convergencia;
     long long flops = calcular_flops(imax, kmax, it);
     metricas.gflops = (double)flops / (metricas.tiempo_total * 1e9);
 
